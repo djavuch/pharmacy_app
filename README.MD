@@ -19,7 +19,7 @@ PharmacyApp is a robust RESTful API designed to handle pharmaceutical products, 
 ## Technology Stack
 - **Backend**: C# 13, .NET 9, ASP.NET Core Web API
 - **Architecture**: Clean Architecture (Domain, Application, Infrastructure, WebApi)
-- **Database**: Entity Framework Core (PostgreSQL support)
+- **ORM**: Entity Framework Core (PostgreSQL)
 - **Containerization**: Docker, Docker Compose
 - **Tools**: FluentValidation, MailKit
 
