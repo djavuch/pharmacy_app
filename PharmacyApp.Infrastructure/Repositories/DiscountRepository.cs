@@ -1,0 +1,91 @@
+﻿using Microsoft.EntityFrameworkCore;
+using PharmacyApp.Application.Interfaces.Repositories;
+using PharmacyApp.Domain.Entities.Discount;
+using PharmacyApp.Infrastructure.Data;
+
+namespace PharmacyApp.Infrastructure.Repositories;
+
+public class DiscountRepository : IDiscountRepository
+{
+    private readonly PharmacyAppDbContext _dbContext;
+
+    public DiscountRepository(PharmacyAppDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<DiscountModel?> GetByIdAsync(Guid discountId)
+    {
+        return await _dbContext.Discounts
+            .Include(d => d.ProductDiscounts)
+                .ThenInclude(pd => pd.Product)
+            .Include(d => d.CategoryDiscounts)
+                .ThenInclude(cd => cd.Category)
+            .FirstOrDefaultAsync(d => d.DiscountId == discountId);
+    }
+
+    public async Task<IEnumerable<DiscountModel>> GetAllAsync()
+    {
+        return await _dbContext.Discounts
+            .Include(d => d.ProductDiscounts)
+            .Include(d => d.CategoryDiscounts)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DiscountModel>> GetActiveDiscountsAsync()
+    {
+        var currentDate = DateTime.UtcNow;
+        return await _dbContext.Discounts
+            .Where(d => d.StartDate <= currentDate && d.EndDate >= currentDate)
+            .Include(d => d.ProductDiscounts)
+            .Include(d => d.CategoryDiscounts)
+            .ToListAsync();
+    }
+
+    public async Task<DiscountModel> AddAsync(DiscountModel discount)
+    {
+        discount.ValidateBusinessRules();   
+        _dbContext.Discounts.Add(discount);
+        await _dbContext.SaveChangesAsync();
+        return discount;
+    }
+
+    public async Task UpdateAsync(DiscountModel discount)
+    {
+        discount.ValidateBusinessRules();
+        _dbContext.Discounts.Update(discount);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(Guid discountId)
+    {
+        var discount = await _dbContext.Discounts.FindAsync(discountId);
+        if (discount != null)
+        {
+            _dbContext.Discounts.Remove(discount);
+            await _dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task<IEnumerable<DiscountModel>> GetDiscountsByProductIdAsync(int productId)
+    {
+        var now = DateTime.UtcNow;
+        return await _dbContext.Discounts
+            .Include(d => d.ProductDiscounts)     
+            .Include(d => d.CategoryDiscounts)    
+            .Where(d => d.IsActive && d.StartDate <= now && d.EndDate >= now &&
+                        d.ProductDiscounts.Any(pd => pd.ProductId == productId))
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<DiscountModel>> GetDiscountsByCategoryIdAsync(int categoryId)
+        {
+            var now = DateTime.UtcNow;
+            return await _dbContext.Discounts
+                .Include(d => d.ProductDiscounts)
+                .Include(d => d.CategoryDiscounts)
+                .Where(d => d.IsActive && d.StartDate <= now && d.EndDate >= now &&
+                            d.CategoryDiscounts.Any(cd => cd.CategoryId == categoryId))
+                .ToListAsync();
+    }   
+}
