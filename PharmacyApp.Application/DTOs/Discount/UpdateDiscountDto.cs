@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Discount;
 
-public class UpdateDiscountDto
+public record UpdateDiscountDto
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

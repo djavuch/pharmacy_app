@@ -21,14 +21,17 @@ public class DiscountRepository : IDiscountRepository
                 .ThenInclude(pd => pd.Product)
             .Include(d => d.CategoryDiscounts)
                 .ThenInclude(cd => cd.Category)
+            .AsSplitQuery() 
             .FirstOrDefaultAsync(d => d.DiscountId == discountId);
     }
 
     public async Task<IEnumerable<DiscountModel>> GetAllAsync()
     {
         return await _dbContext.Discounts
+            .AsNoTracking()
             .Include(d => d.ProductDiscounts)
             .Include(d => d.CategoryDiscounts)
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -36,9 +39,11 @@ public class DiscountRepository : IDiscountRepository
     {
         var currentDate = DateTime.UtcNow;
         return await _dbContext.Discounts
+            .AsNoTracking()
             .Where(d => d.StartDate <= currentDate && d.EndDate >= currentDate)
             .Include(d => d.ProductDiscounts)
             .Include(d => d.CategoryDiscounts)
+            .AsSplitQuery()
             .ToListAsync();
     }
 
@@ -71,8 +76,6 @@ public class DiscountRepository : IDiscountRepository
     {
         var now = DateTime.UtcNow;
         return await _dbContext.Discounts
-            .Include(d => d.ProductDiscounts)     
-            .Include(d => d.CategoryDiscounts)    
             .Where(d => d.IsActive && d.StartDate <= now && d.EndDate >= now &&
                         d.ProductDiscounts.Any(pd => pd.ProductId == productId))
             .ToListAsync();
@@ -82,8 +85,6 @@ public class DiscountRepository : IDiscountRepository
         {
             var now = DateTime.UtcNow;
             return await _dbContext.Discounts
-                .Include(d => d.ProductDiscounts)
-                .Include(d => d.CategoryDiscounts)
                 .Where(d => d.IsActive && d.StartDate <= now && d.EndDate >= now &&
                             d.CategoryDiscounts.Any(cd => cd.CategoryId == categoryId))
                 .ToListAsync();

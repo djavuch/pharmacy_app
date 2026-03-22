@@ -63,10 +63,10 @@ public class UserAddressService : IUserAddressService
         var address = await _unitOfWork.UserAddresses.GetByIdAsync(id);
 
         if (address is null)
-            throw new KeyNotFoundException($"Address not found");
+            throw new NotFoundException("Address not found");
 
         if (address.UserId != userId)
-            throw new UnauthorizedAccessException();
+            throw new UnauthorizedException("You do not have permission to modify this address.");
 
         address.Street = saveAddressDto.Street;
         address.ApartmentNumber = saveAddressDto.ApartmentNumber;

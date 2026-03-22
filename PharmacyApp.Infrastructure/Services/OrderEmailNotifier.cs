@@ -3,15 +3,16 @@ using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Domain.Entities;
 using System.Text;
+using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Infrastructure.Services;
 
-public class OrderEmailService : IOrderEmailService
+public class OrderEmailNotifier : IOrderEmailNotifier
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
     private readonly IEmailSenderService _emailSenderService;
 
-    public OrderEmailService(IUnitOfWorkRepository unitOfWork, IEmailSenderService emailSenderService)
+    public OrderEmailNotifier(IUnitOfWorkRepository unitOfWork, IEmailSenderService emailSenderService)
     {
         _unitOfWork = unitOfWork;
         _emailSenderService = emailSenderService;
@@ -20,9 +21,9 @@ public class OrderEmailService : IOrderEmailService
     public async Task SendOrderConfirmationEmailAsync(int orderId)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
-        if (order == null)
+        if (order is null)
         {
-            throw new ArgumentException($"Order with ID {orderId} not found.");
+            throw new NotFoundException($"Order with ID {orderId} not found.");
         }
 
         var subject = $"Order Confirmation - Order #{order.Id}";
@@ -41,9 +42,9 @@ public class OrderEmailService : IOrderEmailService
     public async Task SendOrderStatusUpdateEmailAsync(int orderId, string oldStatus, string newStatus)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
-        if (order == null || order.User == null)
+        if (order is null || order.User is null)
         {
-            throw new InvalidOperationException($"Order with ID {orderId} not found.");
+            throw new NotFoundException($"Order with ID {orderId} not found.");
         }
 
         var subject = $"Order Status Update - Order #{order.Id}";
@@ -63,8 +64,10 @@ public class OrderEmailService : IOrderEmailService
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
 
-        if (order == null || order.User == null)
-            throw new InvalidOperationException("Order or associated user not found.");
+        if (order is null || order.User is null)
+        {
+            throw new NotFoundException("Order or associated user not found.");
+        }
 
         var subject = $"Order Cancellation - Order #{order.Id}";
         var body = BuildOrderCancellationEmailBody(order);

@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.User.AccountDto;
 
-public class UserRegistrationDto
+public record UserRegistrationDto
 {
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;

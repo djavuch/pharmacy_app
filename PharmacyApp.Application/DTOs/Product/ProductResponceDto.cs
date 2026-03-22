@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Product;
 
-public class ProductResponceDto()
+public record ProductResponceDto()
 {
     public int Id { get; set; }
     public string Name { get; set; }

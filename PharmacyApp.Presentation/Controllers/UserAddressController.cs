@@ -13,12 +13,10 @@ namespace PharmacyApp.Presentation.Controllers;
 public class AddressController : ControllerBase
 {
     private readonly IUserAddressService _addressService;
-    private readonly IValidator<SaveAddressDto> _saveValidator;
 
-    public AddressController(IUserAddressService addressService, IValidator<SaveAddressDto> saveValidator)
+    public AddressController(IUserAddressService addressService)
     {
         _addressService = addressService;
-        _saveValidator = saveValidator;
     }
 
     [HttpGet]
@@ -43,10 +41,6 @@ public class AddressController : ControllerBase
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
-        var validationResult = await _saveValidator.ValidateAsync(dto);
-        if (!validationResult.IsValid)
-            return BadRequest(validationResult.Errors);
-
         var address = await _addressService.CreateAddressAsync(dto, userId);
         return CreatedAtAction(nameof(GetAddress), new { id = address.Id }, address);
     }
@@ -55,59 +49,24 @@ public class AddressController : ControllerBase
     public async Task<IActionResult> UpdateAddress(int id, SaveAddressDto dto)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-        var validationResult = await _saveValidator.ValidateAsync(dto);
-        if (!validationResult.IsValid)
-            return BadRequest(validationResult.Errors);
-
-        try
-        {
-            var address = await _addressService.UpdateAddressAsync(id, dto, userId);
-            return Ok(address);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+        
+        var address = await _addressService.UpdateAddressAsync(id, dto, userId);
+        return Ok(address);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAddress(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-        try
-        {
-            await _addressService.DeleteAddressAsync(id, userId);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Forbid();
-        }
+        await _addressService.DeleteAddressAsync(id, userId);
+        return NoContent();
     }
 
     [HttpPatch("{id}/default")]
     public async Task<IActionResult> SetDefault(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-
-        try
-        {
-            await _addressService.SetDefaultAddressAsync(id, userId);
-            return NoContent();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
+        await _addressService.SetDefaultAddressAsync(id, userId);
+        return NoContent();
     }
 }

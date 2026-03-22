@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Order;
 
-public class OrderAddressDto : AddressDetailsDto
+public record OrderAddressDto : AddressDetailsDto
 {
     public override string ToString()
     {

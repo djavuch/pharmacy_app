@@ -3,7 +3,7 @@ using PharmacyApp.Domain.Enums;
 
 namespace PharmacyApp.Application.DTOs.User.UserProfileDto;
 
-public class UserOrdersDto
+public record UserOrdersDto
 {
     public int OrderId { get; set; }
     public DateTime OrderDate { get; set; }

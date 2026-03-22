@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Product;
 
-public class UpdateProductDto
+public record UpdateProductDto
 {
     public int ProductId { get; set; }  
     public string Name { get; set; } = string.Empty;

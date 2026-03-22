@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Email;
 
-public class EmailConfigurationDto
+public record EmailConfigurationDto
 {
     public string? FromName { get; set; }
     public string? SmtpServer { get; set; } 

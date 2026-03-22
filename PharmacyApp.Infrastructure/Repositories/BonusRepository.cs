@@ -17,14 +17,12 @@ public class BonusRepository : IBonusRepository
     public async Task<BonusAccountModel?> GetByUserIdAsync(string userId)
     {
         return await _dbContext.BonusAccounts
-            .Include(b => b.User)
             .FirstOrDefaultAsync(b => b.UserId == userId);
     }
 
     public async Task<IEnumerable<BonusAccountModel>> GetAllAccountsAsync(int pageIndex, int pageSize)
     {
         return await _dbContext.BonusAccounts
-            .Include(b => b.User)
             .OrderByDescending(b => b.Balance)
             .Skip((pageIndex - 1) * pageSize)
             .Take(pageSize)
@@ -55,7 +53,6 @@ public class BonusRepository : IBonusRepository
         string userId, int pageIndex, int pageSize)
     {
         return await _dbContext.BonusTransactions
-            .Include(t => t.BonusAccount)
             .Where(t => t.BonusAccount.UserId == userId)
             .OrderByDescending(t => t.CreatedAt)
             .Skip((pageIndex - 1) * pageSize)

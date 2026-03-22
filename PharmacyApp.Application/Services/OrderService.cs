@@ -17,16 +17,16 @@ namespace PharmacyApp.Application.Services;
 public class OrderService : IOrderService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
-    private readonly IOrderEmailService _orderEmailService;
+    private readonly IOrderEmailNotifier _orderEmailNotifier;
     private readonly IPromoCodeService _promoCodeService;
     private readonly IBonusService _bonusService;
 
     public OrderService(IUnitOfWorkRepository unitOfWork,
-        IOrderEmailService orderEmailService, IPromoCodeService
+        IOrderEmailNotifier orderEmailNotifier, IPromoCodeService
         promoCodeService, IBonusService bonusService)
     {
         _unitOfWork = unitOfWork;
-        _orderEmailService = orderEmailService;
+        _orderEmailNotifier = orderEmailNotifier;
         _promoCodeService = promoCodeService;
         _bonusService = bonusService;
     }
@@ -347,7 +347,7 @@ public class OrderService : IOrderService
 
                     await transaction.CommitAsync();
 
-                    await _orderEmailService.SendOrderConfirmationEmailAsync(order.Id);
+                    await _orderEmailNotifier.SendOrderConfirmationEmailAsync(order.Id);
 
                     return order.ToOrderResponseDto();
                 }
@@ -395,11 +395,13 @@ public class OrderService : IOrderService
                 throw new ConflictException("Only pending orders can be updated.");
             }
 
+            var existingProductIds = order.OrderItems.Select(i => i.ProductId).ToList();
+            var existingProducts = await _unitOfWork.Products.GetByIdsAsync(existingProductIds); 
+            var existingProductMap = existingProducts.ToDictionary(p => p.Id);
+
             foreach (var existingItem in order.OrderItems)
             {
-                var product = await _unitOfWork.Products.GetByIdAsync(existingItem.ProductId);
-
-                if (product is not null)
+                if (existingProductMap.TryGetValue(existingItem.ProductId, out var product))
                 {
                     product.StockQuantity += existingItem.Quantity;
                     await _unitOfWork.Products.UpdateAsync(product);
@@ -615,7 +617,7 @@ public class OrderService : IOrderService
 
             await transaction.CommitAsync();
 
-            await _orderEmailService.SendOrderStatusUpdateEmailAsync(order.Id, oldStatus.ToString(), newStatus.ToString());
+            await _orderEmailNotifier.SendOrderStatusUpdateEmailAsync(order.Id, oldStatus.ToString(), newStatus.ToString());
         }
         catch (Exception)
         {

@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.User.AccountDto;
 
-public class IdentityResultDto
+public record IdentityResultDto
 {
     public bool Succeeded { get; set; }
     public object? Data { get; set; }

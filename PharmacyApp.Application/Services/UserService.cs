@@ -13,6 +13,7 @@ public class UserService : IUserService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
     private readonly HybridCache _cache;
+    private static int _cacheVersion = 0;
     
     public UserService(IUnitOfWorkRepository unitOfWork, HybridCache cache)
     {
@@ -33,7 +34,7 @@ public class UserService : IUserService
     public async Task<UserDto?> GetCurrentUserProfileAsync(string userId)
     {
         return await _cache.GetOrCreateAsync(
-            $"user:profile:{userId}",
+            $"user_v{_cacheVersion}:profile:{userId}",
             async cancel =>
             {
                 var user = await _unitOfWork.Users.GetCurrentProfileAsync(userId);
@@ -56,7 +57,7 @@ public class UserService : IUserService
     public async Task<PaginatedList<UserOrdersDto?>> GetUserOrdersAsync(string userId, int pageIndex, int pageSize)
     {
         return await _cache.GetOrCreateAsync(
-            $"user:orders:{userId}:{pageIndex}:{pageSize}",
+            $"user_v{_cacheVersion}:orders:{userId}:{pageIndex}:{pageSize}",
             async cancel =>
             {
                 var orders = await _unitOfWork.Users.GetCurrentOrders(userId, pageIndex, pageSize);
@@ -80,7 +81,7 @@ public class UserService : IUserService
     public async Task<PaginatedList<UserReviewsDto?>> GetUserReviewsAsync(string userId, int pageIndex, int pageSize)
     {
         return await _cache.GetOrCreateAsync(
-            $"user:reviews:{userId}:{pageIndex}:{pageSize}",
+            $"user_v{_cacheVersion}:reviews:{userId}:{pageIndex}:{pageSize}",
             async cancel =>
             {
                 var reviews = await _unitOfWork.Users.GetCurrentReviews(userId, pageIndex, pageSize);
@@ -118,6 +119,8 @@ public class UserService : IUserService
 
         await _unitOfWork.Users.UpdateAsync(user);
         await _unitOfWork.SaveChangesAsync();
+        
+        InvalidateUserCache();
     }
 
     // admin only
@@ -126,7 +129,7 @@ public class UserService : IUserService
         string? filterOn = null, string? filterQuery = null, string? sortBy = null, bool isAscending = true)
     {
         return await _cache.GetOrCreateAsync(
-            $"users:all:{pageIndex}:{pageSize}:{filterOn}:{filterQuery}:{sortBy}:{isAscending}",
+            $"users_v{_cacheVersion}:all:{pageIndex}:{pageSize}:{filterOn}:{filterQuery}:{sortBy}:{isAscending}",
             async cancel =>
             {
                 var usersQuery = _unitOfWork.Users.GetAllAsync();
@@ -214,5 +217,10 @@ public class UserService : IUserService
                 LocalCacheExpiration = TimeSpan.FromMinutes(10)
             }
         );
+    }
+    
+    private static void InvalidateUserCache()
+    {
+        Interlocked.Increment(ref _cacheVersion);
     }
 }

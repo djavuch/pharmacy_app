@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Email;
 
-public class EmailRequestDto
+public record EmailRequestDto
 {
     public string To { get; set; }  = string.Empty;
     public string Subject { get; set; } = string.Empty;

@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Review;
 
-public class CreateProductReviewDto
+public record CreateProductReviewDto
 {
     public int ProductId { get; set; }
     public int Rating { get; set; } // e.g., 1 to 5

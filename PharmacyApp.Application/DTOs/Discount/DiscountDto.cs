@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Discount;
 
-public class DiscountDto
+public record DiscountDto
 {
     public Guid DiscountId { get; set; }
     public string Name { get; set; } = string.Empty;

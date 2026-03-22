@@ -15,7 +15,9 @@ public class ProductRepository: IProductRepository
 
     public IQueryable<ProductModel> GetAllAsync()
     {
-        return _dbContext.Products.AsQueryable();
+        return _dbContext.Products
+            .Include(p => p.Category)
+            .AsQueryable();
     }
 
     public async Task<ProductModel?> GetByIdAsync(int productId)

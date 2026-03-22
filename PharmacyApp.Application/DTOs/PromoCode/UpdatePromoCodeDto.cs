@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.PromoCode;
 
-public class UpdatePromoCodeDto
+public record UpdatePromoCodeDto
 {
     public string Code { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

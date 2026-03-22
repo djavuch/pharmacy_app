@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Admin.ProductCategory;
 
-public class CategoryDetailsDto
+public record CategoryDetailsDto
 {
     public int CategoryId { get; set; }
     public string CategoryName { get; set; }

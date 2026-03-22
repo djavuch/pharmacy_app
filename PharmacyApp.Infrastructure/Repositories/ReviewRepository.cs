@@ -16,14 +16,13 @@ public class ReviewRepository : IReviewRepository
     public async Task<ReviewModel?> GetByIdAsync(int id)
     {
         return await _dbContext.Reviews
-            .Include(r => r.Product)
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
     public async Task<IEnumerable<ReviewModel>> GetByProductIdAsync(int productId)
     {
         return await _dbContext.Reviews
-            .Include(r => r.User)
+            .AsNoTracking()
             .Where(r => r.ProductId == productId)
             .ToListAsync();
     }

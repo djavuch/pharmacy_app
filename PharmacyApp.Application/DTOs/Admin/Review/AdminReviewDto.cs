@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Admin.Review;
 
-public class AdminReviewDto
+public record AdminReviewDto
 {
     public int Id { get; set; }
     public int ProductId { get; set; }

@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Bonus;
 
-public class BonusAccountDto
+public record BonusAccountDto
 {
     public Guid Id { get; set; }
     public string UserId { get; set; } = string.Empty;

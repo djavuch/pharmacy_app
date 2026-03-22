@@ -17,9 +17,10 @@ public class OrderRepository : IOrderRepository
     public IQueryable<OrderModel> GetAllAsync()
     {
         return _dbContext.Orders
+            .AsNoTracking()
             .Include(o => o.User)
             .Include(o => o.OrderItems)
-           .Include(o => o.ShippingAddress)
+            .Include(o => o.ShippingAddress)
             .AsQueryable();
     }
 

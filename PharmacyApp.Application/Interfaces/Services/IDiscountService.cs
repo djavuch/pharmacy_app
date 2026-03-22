@@ -10,5 +10,5 @@ public interface IDiscountService
     Task<IEnumerable<DiscountDto>> GetActiveDiscountsAsync();
     Task UpdateDiscountAsync(Guid discountId, UpdateDiscountDto dto);
     Task DeleteDiscountAsync(Guid discountId);
-    Task<decimal> CalculateDiscountedPriceAsync(int productId, decimal originalPrice);
+    Task<decimal> CalculateDiscountedPriceAsync(int productId, int categoryId, decimal originalPrice);
 }

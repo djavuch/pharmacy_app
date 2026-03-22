@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.User.UserProfileDto;
 
-public class UpdateUserDto
+public record UpdateUserDto
 {
     public string UserId { get; set; }
     public string? FirstName { get; set; }

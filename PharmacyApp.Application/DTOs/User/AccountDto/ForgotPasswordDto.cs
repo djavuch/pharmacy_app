@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.User.AccountDto;
 
-public class ForgotPasswordDto
+public record ForgotPasswordDto
 {
     public string Email { get; set; } = string.Empty;
 }

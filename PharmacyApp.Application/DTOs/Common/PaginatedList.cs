@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Common;
 
-public class PaginatedList<T>
+public record PaginatedList<T>
 {
     public List<T> Items { get; set; } = [];
     public int PageIndex { get; set; }

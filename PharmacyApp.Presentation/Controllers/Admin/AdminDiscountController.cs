@@ -72,12 +72,12 @@ public class DiscountController : ControllerBase
     /// <summary>Calculates the discounted price for a product given its original price.</summary>
     [HttpGet("product/{productId:int}/price")]
     [AllowAnonymous]
-    public async Task<IActionResult> CalculatePrice(int productId, [FromQuery] decimal price)
+    public async Task<IActionResult> CalculatePrice(int productId, int categoryId, decimal price)
     {
         if (price <= 0)
             return BadRequest("Price must be greater than 0.");
 
-        var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(productId, price);
+        var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(productId, categoryId, price);
         return Ok(new { originalPrice = price, discountedPrice });
     }
 }

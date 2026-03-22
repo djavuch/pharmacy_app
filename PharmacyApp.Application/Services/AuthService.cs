@@ -18,17 +18,16 @@ namespace PharmacyApp.Application.Services;
 public class AuthService : IAuthService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
-    private readonly IJwtService _jwtService;
+    private readonly IJwtTokenProvider _jwtTokenProvider;
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly IServiceProvider _serviceProvider;
 
 
-    public AuthService(IUnitOfWorkRepository unitOfWork, IRefreshTokenRepository refreshTokenRepository,
-        IJwtService jwtService, IBackgroundTaskQueue taskQueue,
-        IServiceProvider serviceProvider)
+    public AuthService(IUnitOfWorkRepository unitOfWork, IJwtTokenProvider jwtTokenProvider, 
+        IBackgroundTaskQueue taskQueue, IServiceProvider serviceProvider)
     {
         _unitOfWork = unitOfWork;
-        _jwtService = jwtService;
+        _jwtTokenProvider = jwtTokenProvider;
         _taskQueue = taskQueue;
         _serviceProvider = serviceProvider;
     }
@@ -37,14 +36,11 @@ public class AuthService : IAuthService
     {
         var existingUser = await _unitOfWork.Users.GetByEmailAsync(userRegistrationDto.Email);
 
-        if (existingUser != null)
+        if (existingUser is not null)
         {
             throw new ConflictException("User with this email already exists.");
         }
-
-        // Check if there are any users in the system to determine if the new user should be assigned the "Admin" role
-        var findFirstUser = !await _unitOfWork.Users.AnyUserExistsAsync();
-
+        
         var newUser = new UserModel
         {
             UserName = userRegistrationDto.Email,
@@ -61,23 +57,17 @@ public class AuthService : IAuthService
         if (!result.Succeeded)
         {
             throw new BadRequestException("User registration failed: " + string.Join(", ", result.Errors.Select(e => e.Description)));
-        }    
-
-        if (findFirstUser)
-        {
-            await _unitOfWork.Auth.AddToRoleAsync(newUser, "Admin");
         }
-        else
-        {
-            await _unitOfWork.Auth.AddToRoleAsync(newUser, "Customer");
-        }
+        
+        await _unitOfWork.Auth.AddToRoleAsync(newUser, "Customer");
+        
 
         var token = await _unitOfWork.Auth.GenerateEmailConfirmationTokenAsync(newUser);
 
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
             using var scope = _serviceProvider.CreateScope();
-            var emailService = scope.ServiceProvider.GetRequiredService<IAccountEmailService>();
+            var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
             await emailService.SendEmailForRegisterConfirmationAsync(newUser, token, scheme, host);
         });
 
@@ -121,7 +111,7 @@ public class AuthService : IAuthService
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
             using var scope = _serviceProvider.CreateScope();
-            var emailService = scope.ServiceProvider.GetRequiredService<IAccountEmailService>();
+            var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
             await emailService.SendEmailForRegisterConfirmationAsync(user, token, scheme, host);
         });
 
@@ -145,7 +135,7 @@ public class AuthService : IAuthService
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
             using var scope = _serviceProvider.CreateScope();
-            var emailService = scope.ServiceProvider.GetRequiredService<IAccountEmailService>();
+            var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
             await emailService.SendEmailForResetPasswordAsync(user, token, scheme, host);
         });
 
@@ -242,14 +232,14 @@ public class AuthService : IAuthService
             };
         }
 
-        var token = await _jwtService.GenerateToken(user.Id, user.Email);
-        var refreshToken = _jwtService.GenerateRefreshToken();
+        var token = await _jwtTokenProvider.GenerateToken(user.Id, user.Email);
+        var refreshToken = _jwtTokenProvider.GenerateRefreshToken();
 
         var refreshTokenEntity = new RefreshTokenModel
         {
             Token = refreshToken,
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(_jwtService.GetRefreshTokenExpirationInDays()),
+            ExpiresAt = DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -291,14 +281,14 @@ public class AuthService : IAuthService
         await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity);
 
         // Generate new JWT and refresh token
-        var newAccessToken = await _jwtService.GenerateToken(user.Id, user.Email);
-        var newRefreshToken = _jwtService.GenerateRefreshToken();
+        var newAccessToken = await _jwtTokenProvider.GenerateToken(user.Id, user.Email);
+        var newRefreshToken = _jwtTokenProvider.GenerateRefreshToken();
 
         var newRefreshTokenEntity = new RefreshTokenModel
         {
             Token = newRefreshToken,
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(_jwtService.GetRefreshTokenExpirationInDays()),
+            ExpiresAt = DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()),
             CreatedAt = DateTime.UtcNow
         };
 

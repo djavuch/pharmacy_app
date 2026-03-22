@@ -34,6 +34,7 @@ public class UserRepository : IUserRepository
     public async Task<PaginatedList<OrderModel?>> GetCurrentOrders(string userId, int pageIndex, int pageSize)
     {
         var query = _dbContext.Orders
+            .AsNoTracking()
             .Include(o => o.OrderItems)
             .Where(o => o.UserId == userId)
             .OrderByDescending(o => o.OrderDate);
@@ -44,6 +45,8 @@ public class UserRepository : IUserRepository
     public async Task<PaginatedList<ReviewModel?>> GetCurrentReviews(string userId, int pageIndex, int pageSize)
     {
         var query = _dbContext.Reviews
+            .AsNoTracking()
+            .Include(r => r.Product)
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt);
 

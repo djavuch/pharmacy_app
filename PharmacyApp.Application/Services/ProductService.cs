@@ -8,6 +8,7 @@ using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Entities;
 using System.Collections.Concurrent;
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Application.Services;
@@ -16,13 +17,20 @@ public class ProductService : IProductService
     private readonly IUnitOfWorkRepository _unitOfWork;
     private readonly HybridCache _cache;
     private readonly IDiscountService _discountService;
+    private readonly ILogger<ProductService> _logger;   
     private static readonly ConcurrentDictionary<int, SemaphoreSlim> _productLocks = new();
+    private static int _cacheVersion = 0;
 
-    public ProductService(IUnitOfWorkRepository unitOfWork, HybridCache cache, IDiscountService discountService)   
+    public ProductService(
+        IUnitOfWorkRepository unitOfWork, 
+        HybridCache cache, 
+        IDiscountService discountService,
+        ILogger<ProductService> logger)   
     {
         _unitOfWork = unitOfWork;
         _cache = cache;
         _discountService = discountService;
+        _logger = logger;
     }
 
     public async Task<PaginatedList<ProductDto>> GetAllProductsAsync(
@@ -33,12 +41,14 @@ public class ProductService : IProductService
         string? sortBy = null, 
         bool isAscending = true)
     {
-        var cacheKey = $"products_{pageIndex}_{pageSize}_{filterOn}_{filterQuery}_{sortBy}_{isAscending}";
+        var cacheKey = $"products_v{_cacheVersion}_{pageIndex}_{pageSize}_{filterOn}_{filterQuery}_{sortBy}_{isAscending}";
 
         return await _cache.GetOrCreateAsync(
             cacheKey,
             async cancel =>
             {
+                _logger.LogWarning("CACHE MISS - Loading products from database. Key: {CacheKey}", cacheKey);
+                
                 var productsQuery = _unitOfWork.Products.GetAllAsync();
 
                 if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
@@ -71,7 +81,7 @@ public class ProductService : IProductService
                 var productDtos = new List<ProductDto>();
                 foreach (var product in products)
                 {
-                    var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(product.Id, product.Price);
+                    var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(product.Id, product.CategoryId, product.Price);
                     productDtos.Add(product.ToProductDto(discountedPrice));
                 }
 
@@ -94,15 +104,20 @@ public class ProductService : IProductService
     public async Task<ProductDto?> GetProductByIdAsync(int productId)
     {
         return await _cache.GetOrCreateAsync(
-            $"products:id:{productId}",
+            $"products_v{_cacheVersion}:id:{productId}",
             async cancel =>
             {
                 var product = await _unitOfWork.Products.GetByIdAsync(productId);
                 if (product is null)
                     return null;
 
-                var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(product.Id, product.Price);
+                var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(product.Id, product.CategoryId, product.Price);
                 return product.ToProductDto(discountedPrice);
+            },
+            new HybridCacheEntryOptions()
+            {
+                Expiration = TimeSpan.FromMinutes(5),
+                LocalCacheExpiration = TimeSpan.FromMinutes(5)
             }
         );
     }
@@ -130,6 +145,8 @@ public class ProductService : IProductService
 
         var addedProduct = await _unitOfWork.Products.AddAsync(product);
         await _unitOfWork.SaveChangesAsync();
+        
+        InvalidateProductsCache();
 
         return product.ToProductDto();
     }
@@ -162,7 +179,7 @@ public class ProductService : IProductService
         await _unitOfWork.Products.UpdateAsync(product);
         await _unitOfWork.SaveChangesAsync();
 
-        await _cache.RemoveAsync($"products:id:{updateProductDto.ProductId}");
+        InvalidateProductsCache();
     }
 
     public async Task DeleteProductAsync(int productId)
@@ -177,7 +194,7 @@ public class ProductService : IProductService
         await _unitOfWork.Products.DeleteAsync(productId);
         await _unitOfWork.SaveChangesAsync();
 
-        await _cache.RemoveAsync($"products:id:{productId}");
+        InvalidateProductsCache();
     }
 
     public async Task UpdateStockAsync(int productId, int quantityChange)
@@ -203,11 +220,16 @@ public class ProductService : IProductService
             await _unitOfWork.Products.UpdateAsync(product);
             await _unitOfWork.SaveChangesAsync();
 
-            await _cache.RemoveAsync($"products:id:{productId}");
+            InvalidateProductsCache();
         }
         finally
         {
             semaphore.Release();
         }
+    }
+    
+    private static void InvalidateProductsCache()
+    {
+        Interlocked.Increment(ref _cacheVersion);
     }
 }

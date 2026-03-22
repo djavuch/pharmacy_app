@@ -18,47 +18,22 @@ public class AccountController : ControllerBase
     private readonly IAuthService _userService;
     private readonly IShoppingCartService _shoppingCartService;
     private readonly ILogger<AccountController> _logger;
-    private readonly IValidator<UserRegistrationDto> _registrationValidator;
-    private readonly IValidator<UserLoginDto> _loginValidator;
-    private readonly IValidator<ChangePasswordDto> _changePasswordValidator;
-    private readonly IValidator<ForgotPasswordDto> _forgotPasswordValidator;
-    private readonly IValidator<ResetPasswordDto> _resetPasswordValidator;
+
 
     public AccountController(IAuthService userService,
         IShoppingCartService shoppingCartService,
-        ILogger<AccountController> logger,
-        IValidator<UserLoginDto> loginValidator,
-        IValidator<UserRegistrationDto> registrationValidator,
-        IValidator<ChangePasswordDto> changePasswordValidator, 
-        IValidator<ForgotPasswordDto> forgotPasswordValidator, 
-        IValidator<ResetPasswordDto> resetPasswordValidator)
+        ILogger<AccountController> logger)
     {
         _userService = userService;
         _shoppingCartService = shoppingCartService;
         _logger = logger;
-        _loginValidator = loginValidator;
-        _registrationValidator = registrationValidator;
-        _changePasswordValidator = changePasswordValidator;
-        _forgotPasswordValidator = forgotPasswordValidator;
-        _resetPasswordValidator = resetPasswordValidator;
+
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserRegistrationDto userRegistrationDto)
     {
-        var validationResult = await _registrationValidator.ValidateAsync(userRegistrationDto);
-
-        if (!validationResult.IsValid) 
-        {
-            throw new ValidationException(validationResult.Errors);
-        }
-
         var result = await _userService.UserRegisterAsync(userRegistrationDto, Request.Scheme, Request.Host.Value);
-
-        if (result is null)
-        {
-            throw new ConflictException("User with this email already exists or registration failed.");
-        }
 
         var sessionId = SessionHelper.GetSessionId(HttpContext);
         if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(result.Id))
@@ -73,13 +48,6 @@ public class AccountController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
     {
-        var validationResult = await _loginValidator.ValidateAsync(userLoginDto);
-
-        if (!validationResult.IsValid)
-        {
-            throw new ValidationException(validationResult.Errors);
-        }
-
         var result = await _userService.LoginAsync(userLoginDto);
 
         if (!result.Succeeded)
@@ -150,11 +118,6 @@ public class AccountController : ControllerBase
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
     {
-        var validationResult = await _forgotPasswordValidator.ValidateAsync(forgotPasswordDto);
-
-        if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
-
         await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, Request.Scheme, Request.Host.Value);
         return Ok(new { message = "If an account with that email exists, a password reset link has been sent." });
     }
@@ -162,12 +125,6 @@ public class AccountController : ControllerBase
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword(ResetPasswordDto resetPasswordDto)
     {
-        var validationResult = await _resetPasswordValidator.ValidateAsync(resetPasswordDto);
-
-        if (!validationResult.IsValid) {
-            throw new ValidationException(validationResult.Errors);
-        }
-
         var result = await _userService.ResetPasswordAsync(resetPasswordDto);
 
         if (!result.Succeeded)
@@ -206,12 +163,7 @@ public class AccountController : ControllerBase
         }
 
         changePasswordDto.UserId = userId;
-
-        var validationResult = await _changePasswordValidator.ValidateAsync(changePasswordDto);
-
-        if (!validationResult.IsValid)
-            throw new ValidationException(validationResult.Errors);
-
+        
         await _userService.ChangePasswordAsync(changePasswordDto);
 
         return Ok(new { message = "Password changed successfully." });

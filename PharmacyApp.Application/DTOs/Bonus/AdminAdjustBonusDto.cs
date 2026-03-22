@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Bonus;
 
-public class AdminAdjustBonusDto
+public record AdminAdjustBonusDto
 {
     [Required]
     public decimal Points { get; set; }

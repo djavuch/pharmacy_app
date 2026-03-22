@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.User.AccountDto;
 
-public class ResetPasswordDto
+public record ResetPasswordDto
 
 {
     public string Email { get; set; } = string.Empty;

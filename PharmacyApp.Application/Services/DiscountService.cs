@@ -122,15 +122,10 @@ public class DiscountService : IDiscountService
         await _unitOfWork.Discounts.DeleteAsync(discountId);
     }
 
-    public async Task<decimal> CalculateDiscountedPriceAsync(int productId, decimal originalPrice)
+    public async Task<decimal> CalculateDiscountedPriceAsync(int productId, int categoryId, decimal originalPrice)
     {
-        var product = await _unitOfWork.Products.GetByIdAsync(productId);
-
         var productDiscounts = await _unitOfWork.Discounts.GetDiscountsByProductIdAsync(productId);
-
-        var categoryDiscounts = product is not null
-            ? await _unitOfWork.Discounts.GetDiscountsByCategoryIdAsync(product.CategoryId)
-            : [];
+        var categoryDiscounts = await _unitOfWork.Discounts.GetDiscountsByCategoryIdAsync(categoryId);
 
         var activeDiscount = productDiscounts
             .Concat(categoryDiscounts)

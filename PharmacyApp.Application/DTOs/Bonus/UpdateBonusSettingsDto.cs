@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Bonus;
 
-public class UpdateBonusSettingsDto
+public record UpdateBonusSettingsDto
 {
     [Range(0.01, 100)]
     public decimal EarningRate { get; set; }

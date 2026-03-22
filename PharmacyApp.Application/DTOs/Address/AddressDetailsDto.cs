@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Address;
 
-public class AddressDetailsDto
+public record AddressDetailsDto
 {
     public string Street { get; set; }
     public string? ApartmentNumber { get; set; }

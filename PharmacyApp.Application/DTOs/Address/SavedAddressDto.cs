@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Address;
 
-public class SavedAddressDto : AddressDetailsDto
+public record SavedAddressDto : AddressDetailsDto
 {
     public int Id { get; set; }
     public string Label { get; set; }

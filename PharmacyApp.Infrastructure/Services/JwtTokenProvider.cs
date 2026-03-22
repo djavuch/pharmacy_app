@@ -10,11 +10,11 @@ using System.Text;
 
 namespace PharmacyApp.Infrastructure.Services;
 
-public class JwtService : IJwtService
+public class JwtTokenProvider : IJwtTokenProvider
 {
     private readonly IConfiguration _configuration;
     private readonly UserManager<UserModel> _userManager;
-    public JwtService(IConfiguration configuration, UserManager<UserModel> userManager)
+    public JwtTokenProvider(IConfiguration configuration, UserManager<UserModel> userManager)
     {
         _configuration = configuration;
         _userManager = userManager;

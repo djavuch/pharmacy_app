@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Admin.ProductCategory;
 
-public class UpdateCategoryDto
+public record UpdateCategoryDto
 {
     public int CategoryId { get; set; } 
     public string CategoryName { get; set; }

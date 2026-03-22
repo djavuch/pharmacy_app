@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.User.AccountDto;
 
-public class LoginResultDto
+public record LoginResultDto
 {
     public bool Succeeded { get; set; } 
     public string? Token { get; set; }

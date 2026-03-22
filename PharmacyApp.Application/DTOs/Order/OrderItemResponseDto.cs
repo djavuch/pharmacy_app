@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Order;
 
-public class OrderItemResponseDto
+public record OrderItemResponseDto
 {
     public int OrderId { get; set; }
     public string ProductName { get; set; }

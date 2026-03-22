@@ -21,6 +21,8 @@ using PharmacyApp.Infrastructure.Repositories;
 using PharmacyApp.Infrastructure.Services;
 using System.Security.Claims;
 using System.Text;
+using PharmacyApp.Application.Interfaces.UserRoles;
+using PharmacyApp.Infrastructure.Configuration.Admin;
 
 namespace PharmacyApp.Infrastructure;
 public static class DependencyInjection
@@ -40,6 +42,7 @@ public static class DependencyInjection
         });
 
         services.Configure<EmailConfigurationDto>(configuration.GetSection("EmailConfiguration"));
+        services.Configure<AdminBootstrapOptions>(configuration.GetSection("AdminBootstrap"));
 
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IDiscountRepository, DiscountRepository>();
@@ -53,16 +56,18 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUnitOfWorkRepository, UnitOfWorkRepository>();
         services.AddScoped<IEmailSenderService, EmailSenderService>();
-        services.AddScoped<IAccountEmailService, AccountEmailService>();
-        services.AddScoped<IOrderEmailService, OrderEmailService>();
+        services.AddScoped<IAccountNotificationSender, AccountNotificationSender>();
+        services.AddScoped<IOrderEmailNotifier, OrderEmailNotifier>();
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
         services.AddScoped<IPromoCodeRepository, PromoCodeRepository>();
         services.AddScoped<IBonusRepository, BonusRepository>();
+        services.AddScoped<IRoleInitializationService, RoleInitializationService>();
+        
 
         services.AddSingleton<IBackgroundTaskQueue>(sp => new BackgroundTaskQueue(100));
         services.AddHostedService<QueueHostedService>();
 
-        services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IJwtTokenProvider, JwtTokenProvider>();
 
         services.AddDataProtection()
            .SetApplicationName("PharmacyApp")

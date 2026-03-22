@@ -1,5 +1,5 @@
 ﻿namespace PharmacyApp.Application.DTOs.Order;
-public class UpdateOrderItemDto
+public record UpdateOrderItemDto
 {
     public int ProductId { get; set; }
     public string ProductName { get; set; }

@@ -36,19 +36,7 @@ public class AdminOrderController : ControllerBase
     [HttpPatch("update-order-status/{orderId}")]
     public async Task<IActionResult> UpdateOrderStatus(int orderId, UpdateOrderStatusDto updateOrderStatusDto)
     {
-        try
-        {
-            await _orderService.UpdateOrderStatusAsync(orderId, updateOrderStatusDto);
-            return NoContent();
-
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }   
+        await _orderService.UpdateOrderStatusAsync(orderId, updateOrderStatusDto);
+        return NoContent();   
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Bonus;
 
-public class BonusSettingsDto
+public record BonusSettingsDto
 {
     public decimal EarningRate { get; set; }
     public decimal MinOrderAmountToEarn { get; set; }

@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.ShoppingCart;
 
-public class CartItemDto
+public record CartItemDto
 {
     public int CartId { get; set; }
     public int ProductId { get; set; }

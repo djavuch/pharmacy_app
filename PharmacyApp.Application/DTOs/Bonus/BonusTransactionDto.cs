@@ -2,7 +2,7 @@
 
 namespace PharmacyApp.Application.DTOs.Bonus;
 
-public class BonusTransactionDto
+public record BonusTransactionDto
 {
     public Guid Id { get; set; }
     public BonusTransactionType Type { get; set; }

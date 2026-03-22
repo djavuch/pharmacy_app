@@ -3,7 +3,7 @@ using PharmacyApp.Domain.Enums;
 
 namespace PharmacyApp.Application.DTOs.Order;
 
-public class OrderResponseDto
+public record OrderResponseDto
 {
     public int Id { get; set; }
     public string BuyerFirstName { get; set; }

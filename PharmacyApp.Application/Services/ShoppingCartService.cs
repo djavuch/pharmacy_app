@@ -94,7 +94,7 @@ public class ShoppingCartService : IShoppingCartService
 
             if (existingItem.Quantity > product.StockQuantity)
             {
-                throw new InvalidOperationException($"Total quantity exceeds available stock: {product.StockQuantity}");
+                throw new ConflictException($"Total quantity exceeds available stock: {product.StockQuantity}");
             }
 
             await _unitOfWork.ShoppingCarts.UpdateItemAsync(existingItem);
@@ -145,12 +145,12 @@ public class ShoppingCartService : IShoppingCartService
 
         if (product is null)
         {
-            throw new KeyNotFoundException($"Product with ID {updateCartDto.ProductId} not found");
+            throw new NotFoundException($"Product with ID {updateCartDto.ProductId} not found");
         }
 
         if (updateCartDto.Quantity > product.StockQuantity)
         {
-            throw new InvalidOperationException($"Requested quantity exceeds available stock: {product.StockQuantity}");
+            throw new ConflictException($"Requested quantity exceeds available stock: {product.StockQuantity}");
         }
 
         cartItem.Quantity = updateCartDto.Quantity;
@@ -169,7 +169,7 @@ public class ShoppingCartService : IShoppingCartService
 
         if (cart is null)
         {
-            throw new KeyNotFoundException("Shopping cart not found.");
+            throw new NotFoundException("Shopping cart not found.");
         }
 
         await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, productId);

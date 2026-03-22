@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.Interfaces.Email;
 
-public interface IOrderEmailService
+public interface IOrderEmailNotifier
 {
     Task SendOrderConfirmationEmailAsync(int orderId);
     Task SendOrderStatusUpdateEmailAsync(int orderId, string oldStatus, string newStatus);

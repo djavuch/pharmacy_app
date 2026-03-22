@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.User.AccountDto;
 
-public class ChangePasswordDto
+public record ChangePasswordDto
 {
     public string UserId { get; set; } = string.Empty;
     public string CurrentPassword { get; set; } = string.Empty;

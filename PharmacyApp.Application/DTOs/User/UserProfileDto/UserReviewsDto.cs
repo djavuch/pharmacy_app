@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.User.UserProfileDto;
 
-public class UserReviewsDto
+public record UserReviewsDto
 {
     public int ReviewId { get; set; }
     public int ProductId { get; set; }

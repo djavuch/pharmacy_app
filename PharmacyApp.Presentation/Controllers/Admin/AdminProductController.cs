@@ -14,16 +14,10 @@ namespace PharmacyApp.Presentation.Controllers.Admin;
 public class AdminProductController : ControllerBase
 {
     private readonly IProductService _productService;
-    private readonly IValidator<AddProductDto> _addProductValidator;
-    private readonly IValidator<UpdateProductDto> _updateProductValidator;
 
-    public AdminProductController(IProductService productService, 
-        IValidator<AddProductDto> addProductValidator, 
-        IValidator<UpdateProductDto> updateProductValidator)
+    public AdminProductController(IProductService productService)
     {
         _productService = productService;
-        _addProductValidator = addProductValidator;
-        _updateProductValidator = updateProductValidator;
     }
 
     [HttpGet]
@@ -47,12 +41,6 @@ public class AdminProductController : ControllerBase
     [HttpPost("add")]
     public async Task<ActionResult<ProductDto>> AddProduct(AddProductDto addProductDto)
     {
-        var validationResult = await _addProductValidator.ValidateAsync(addProductDto);
-
-        if (!validationResult.IsValid) {
-            return BadRequest(validationResult.Errors);
-        }
-
         var product = await _productService.AddProductAsync(addProductDto);
         return Ok(product);
     }
@@ -60,12 +48,6 @@ public class AdminProductController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateProduct(UpdateProductDto updateProductDto)
     {
-        var validationResult = await _updateProductValidator.ValidateAsync(updateProductDto);
-
-        if (!validationResult.IsValid) {
-            return BadRequest(validationResult.Errors);
-        }
-
         await _productService.UpdateProductAsync(updateProductDto);
         return NoContent();
     }

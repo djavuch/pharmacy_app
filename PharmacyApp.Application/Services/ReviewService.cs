@@ -6,8 +6,6 @@ using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Entities;
-using System.Globalization;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Application.Services;
@@ -62,7 +60,7 @@ public class ReviewService : IReviewService
 
         if (product is null)
         {
-            throw new ArgumentException("Product not found.");
+            throw new NotFoundException("Product not found.");
         }
 
         var review = new ReviewModel

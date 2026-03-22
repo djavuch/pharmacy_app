@@ -6,11 +6,11 @@ using System.Text;
 
 namespace PharmacyApp.Infrastructure.Services;
 
-public class AccountEmailService : IAccountEmailService
+public class AccountNotificationSender : IAccountNotificationSender
 {
     private readonly IEmailSenderService _emailSenderService;
 
-    public AccountEmailService(IEmailSenderService emailSenderService)
+    public AccountNotificationSender(IEmailSenderService emailSenderService)
     {
         _emailSenderService = emailSenderService;
     }

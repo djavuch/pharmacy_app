@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.Order;
 
-public class CreateOrderDto
+public record CreateOrderDto
 {
     public int? SavedAddressId { get; set; }
     public OrderAddressDto? NewAddress { get; set; }

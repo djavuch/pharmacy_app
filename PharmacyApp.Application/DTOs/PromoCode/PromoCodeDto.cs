@@ -1,6 +1,6 @@
 ﻿namespace PharmacyApp.Application.DTOs.PromoCode;
 
-public class PromoCodeDto
+public record PromoCodeDto
 {
     public Guid PromoCodeId { get; set; }
     public string Code { get; set; } = string.Empty;
