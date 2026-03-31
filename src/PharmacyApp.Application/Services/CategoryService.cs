@@ -54,18 +54,6 @@ public async Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync()
     );
 }
 
-    public async Task<CategoryDto?> GetCategoryByNameAsync(string categoryName)
-    {
-        return await _cache.GetOrCreateAsync(
-            $"categories:name:{categoryName}",
-            async cancel =>
-            {
-                var categoryByName = await _unitOfWork.Categories.GetByNameAsync(categoryName);
-                return categoryByName != null ? categoryByName.ToCategoryDto() : null;
-            }
-        );
-    }
-
     public async Task<CategoryDto?> GetCategoryByIdAsync(int categoryId)
     {
         return await _cache.GetOrCreateAsync(

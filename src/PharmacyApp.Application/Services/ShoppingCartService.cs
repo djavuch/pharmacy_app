@@ -257,8 +257,7 @@ public async Task MergeCartsOnLogoutAsync(string userId, string sessionId)
             _logger.LogInformation("COPY: User cart is empty or not found. Nothing to copy.");
             return;
         }
-    
-        // Создаем/получаем гостевую корзину (null userId + sessionId)
+        
         var sessionCart = await GetOrCreateCartAsync(null, sessionId);
     
         foreach (var item in userCart.Items)

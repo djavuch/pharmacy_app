@@ -311,7 +311,7 @@ public class OrderService : IOrderService
                     await _unitOfWork.Orders.AddAsync(order);
                     await _unitOfWork.SaveChangesAsync();
 
-                    // Remember: save the promo code usage only after the order is successfully created to avoid recording usage for failed orders
+                    // Save the promo code usage only after the order is successfully created to avoid recording usage for failed orders
                     if (order.PromoCodeId.HasValue)
                     {
                         await _unitOfWork.PromoCodes.IncrementUsageAsync(order.PromoCodeId.Value);
