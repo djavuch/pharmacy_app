@@ -1,135 +1,108 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PharmacyApp.Application.DTOs.Admin.Review;
-using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.Review;
+﻿using Microsoft.Extensions.Caching.Hybrid;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.Review;
+using PharmacyApp.Application.Contracts.Review.Admin;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Application.Services;
 
 public class ReviewService : IReviewService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
+    private readonly HybridCache _cache;
 
-    public ReviewService(IUnitOfWorkRepository unitOfWork)
+    public ReviewService(IUnitOfWorkRepository unitOfWork,  HybridCache cache)
     {
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
-    public async Task<ProductReviewDto> GetByIdAsync(int id)
+    public async Task<Result<ProductReviewDto>> GetByIdAsync(int id)
     {
-        var review = await _unitOfWork.Reviews.GetByIdAsync(id); 
+        var review = await _unitOfWork.Reviews.GetByIdAsync(id);
 
         if (review is null)
-        {
-            throw new NotFoundException("Review not found.");
-        }
+            return Result<ProductReviewDto>.NotFound("Review not found.");
 
-        return review.ToProductReviewDto();
+        return Result<ProductReviewDto>.Success(review.ToProductReviewDto());
     }
 
-    public async Task<PaginatedList<ProductReviewDto>> GetReviewsByProductIdAsync(int productId, int pageIndex = 1, int pageSize = 10)
+    public async Task<PaginatedList<ProductReviewDto>> GetReviewsByProductIdAsync(int productId, QueryParams query)
     {
-        var query = _unitOfWork.Reviews
-            .GetByProductId(productId)
-            .Where(r => r.IsApproved);
-
-        var totalReviews = await query.CountAsync();
-
-        var pagedReviews = await query
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .Select(r => new ProductReviewDto 
-            {
-                Id = r.Id,
-                ProductId = r.ProductId,
-                ProductName = r.Product != null ? r.Product.Name : null,
-                FullName = (r.User != null ? r.User.FirstName : "") + " " + (r.User != null ? r.User.LastName : ""),
-                Rating = r.Rating,
-                Content = r.Content,
-                CreatedAt = r.CreatedAt
-            })
-            .ToListAsync();
-
-        return new PaginatedList<ProductReviewDto>
+        return await _cache.GetOrCreateAsync(CacheKeys.Reviews.ByProduct(productId, query), async _ =>
         {
-            Items = pagedReviews,
-            PageIndex = pageIndex,
-            TotalPages = (int)Math.Ceiling(totalReviews / (double)pageSize),
-            PageSize = pageSize
-        };
+            var reviewsQuery = _unitOfWork.Reviews
+                .GetByProductId(productId)
+                .Where(r => r.IsApproved);
+
+            return await PaginatedList<ProductReviewDto>.CreateAsync(
+                reviewsQuery.Select(r => new ProductReviewDto
+                {
+                    Id = r.Id,
+                    ProductId = r.ProductId,
+                    ProductName = r.Product != null ? r.Product.Name : null,
+                    FullName = (r.User != null ? r.User.FirstName : "") + " " + (r.User != null ? r.User.LastName : ""),
+                    Rating = r.Rating,
+                    Content = r.Content,
+                    CreatedAt = r.CreatedAt
+                }),
+                query.PageIndex,
+                query.PageSize);
+        }, new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(10) });
     }
 
-    public async Task<ProductReviewDto> AddReviewAsync(CreateProductReviewDto reviewDto, string userId)
+    public async Task<Result<ProductReviewDto>> AddReviewAsync(CreateProductReviewDto reviewDto, string userId)
     {
         var product = await _unitOfWork.Products.GetByIdAsync(reviewDto.ProductId);
 
         if (product is null)
-        {
-            throw new NotFoundException("Product not found.");
-        }
-
-        var review = new ReviewModel
-        {
-            ProductId = reviewDto.ProductId,
-            UserId = userId,
-            Rating = reviewDto.Rating,
-            Content = reviewDto.Content,
-            CreatedAt = DateTime.UtcNow,
-            IsApproved = false // Reviews need to be approved before being visible
-        };
+            return Result<ProductReviewDto>.NotFound("Product not found.");
+        
+        var review = new Review(userId, reviewDto.ProductId, reviewDto.Rating, reviewDto.Content);
 
         await _unitOfWork.Reviews.AddAsync(review); 
         await _unitOfWork.SaveChangesAsync();
 
-        return review.ToProductReviewDto();
+        return Result<ProductReviewDto>.Success(review.ToProductReviewDto());
     }
 
     // Admin specific methods
-    public async Task<PaginatedList<AdminReviewDto>> GetAllReviewsAsync(
-        int pageIndex = 1,
-        int pageSize = 10,
-        string? filterOn = null,
-        string? filterQuery = null,
-        bool? isApproved = null,
-        string? sortBy = null,
-        bool isAscending = true)
+    public async Task<PaginatedList<AdminReviewDto>> GetAllReviewsAsync(ReviewQueryParams queryParams)
     {
         var reviewsQuery = _unitOfWork.Reviews.GetAll();
 
-        if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
+        if (!string.IsNullOrWhiteSpace(queryParams.FilterOn) && !string.IsNullOrWhiteSpace(queryParams.FilterQuery))
         {
-            reviewsQuery = filterOn?.ToLowerInvariant() switch
+            reviewsQuery = queryParams.FilterOn?.ToLowerInvariant() switch
             {
-                "product" => reviewsQuery.Where(r => r.Product != null && r.Product.Name.Contains(filterQuery)),
-                "user" => reviewsQuery.Where(r => r.User != null && r.User.UserName != null && r.User.UserName.Contains(filterQuery)),
+                "product" => reviewsQuery.Where(r => r.Product != null && r.Product.Name.Contains(queryParams.FilterQuery)),
+                "user" => reviewsQuery.Where(r => r.User != null && r.User.UserName != null && r.User.UserName.Contains(queryParams.FilterQuery)),
                 _ => reviewsQuery,
                 
             };
         }
-        if (isApproved.HasValue)
+        if (queryParams.IsApproved.HasValue)
         {
-            reviewsQuery = reviewsQuery.Where(r => r.IsApproved == isApproved.Value);
+            reviewsQuery = reviewsQuery.Where(r => r.IsApproved == queryParams.IsApproved.Value);
         }
 
-        reviewsQuery = sortBy?.ToLowerInvariant() switch
+        reviewsQuery = queryParams.SortBy?.ToLowerInvariant() switch
         {
-            "rating" => isAscending ? reviewsQuery.OrderBy(r => r.Rating) : reviewsQuery.OrderByDescending(r => r.Rating),
-            "createdat" => isAscending ? reviewsQuery.OrderBy(r => r.CreatedAt) : reviewsQuery.OrderByDescending(r => r.CreatedAt),
-            "product" => isAscending ? reviewsQuery.OrderBy(r => r.Product!.Name) : reviewsQuery.OrderByDescending(r => r.Product!.Name),
-            "user" => isAscending ? reviewsQuery.OrderBy(r => r.User!.UserName) : reviewsQuery.OrderByDescending(r => r.User!.UserName),
+            "rating" => queryParams.IsAscending ? reviewsQuery.OrderBy(r => r.Rating) : reviewsQuery.OrderByDescending(r => r.Rating),
+            "createdat" => queryParams.IsAscending ? reviewsQuery.OrderBy(r => r.CreatedAt) : reviewsQuery.OrderByDescending(r => r.CreatedAt),
+            "product" => queryParams.IsAscending ? reviewsQuery.OrderBy(r => r.Product!.Name) : reviewsQuery.OrderByDescending(r => r.Product!.Name),
+            "user" => queryParams.IsAscending ? reviewsQuery.OrderBy(r => r.User!.UserName) : reviewsQuery.OrderByDescending(r => r.User!.UserName),
             _ => reviewsQuery.OrderByDescending(r => r.CreatedAt) 
         };
 
-        var totalCount = await reviewsQuery.CountAsync();
-        var skipResults = (pageIndex - 1) * pageSize;
-        var items = await reviewsQuery
-            .Skip(skipResults)
-            .Take(pageSize)
-            .Select(r => new AdminReviewDto
+        return await PaginatedList<AdminReviewDto>.CreateAsync(
+            reviewsQuery.Select(r => new AdminReviewDto
             {
                 Id = r.Id,
                 ProductId = r.ProductId,
@@ -140,17 +113,8 @@ public class ReviewService : IReviewService
                 Content = r.Content,
                 IsApproved = r.IsApproved,
                 CreatedAt = r.CreatedAt
-            })
-            .ToListAsync();
-
-
-        return new PaginatedList<AdminReviewDto>
-        {
-            Items = items,
-            PageIndex = pageIndex,
-            TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
-            PageSize = pageSize
-        };
+            }),
+            queryParams.PageIndex, queryParams.PageSize);
     }
 
     public async Task<bool> ApproveReviewAsync(int reviewId)
@@ -162,7 +126,7 @@ public class ReviewService : IReviewService
             return false;
         }
 
-        review.IsApproved = true;
+        review.Approve();
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
@@ -175,12 +139,12 @@ public class ReviewService : IReviewService
         {
             return false;
         }
-        review.IsApproved = false;
+        review.Reject();
         await _unitOfWork.SaveChangesAsync();
         return true;
     }
 
-    public void DeleteReview(ReviewModel review)
+    public void DeleteReview(Review review)
     {
         _unitOfWork.Reviews.DeleteAsync(review);
     }

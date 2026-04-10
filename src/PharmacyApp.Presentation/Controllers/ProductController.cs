@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.Product;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Common.Results;
+using PharmacyApp.Application.Contracts.Product;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers;
@@ -17,50 +19,33 @@ public class ProductController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<ApiResponse>> GetAllProducts(
-        string? filterOn = null,
-        string? filterQuery = null,
-        bool? isAscending = null,
-        string? sortBy = null,
-        int pageIndex = 1,
-        int pageSize = 10)
+    public async Task<ActionResult<ApiResponse>> GetAllProducts([FromQuery] QueryParams query)
     {
-        var products = await _productService.GetAllProductsAsync(
-            pageIndex,
-            pageSize,
-            filterOn,
-            filterQuery,
-            sortBy,
-            isAscending ?? true);
+        var products = await _productService.GetAllProductsAsync(query);
         return new ApiResponse(true, null, products);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<ProductDto>> GetProductById(int id)
     {
-        var product = await _productService.GetProductByIdAsync(id);
-        if (product is null)
-        {
-            return NotFound();
-        }
-        return Ok(product);
+        var result = await _productService.GetProductByIdAsync(id);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);;
     }
 
     [HttpGet("category/{categoryName}")]
-    public async Task<ActionResult<ApiResponse>> GetProductsByCategory(
-        string categoryName,
-        bool? isAscending,
-        string? sortBy,
-        int pageIndex = 1,
-        int pageSize = 10)
+    public async Task<ActionResult<ApiResponse>> GetProductsByCategory(string categoryName, QueryParams query)
     {
-        var products = await _productService.GetAllProductsAsync(
-            pageIndex,
-            pageSize,
-            filterOn: "Category",
-            filterQuery: categoryName,
-            sortBy,
-            isAscending ?? true);
+        var categoryQuery = query with
+        {
+            FilterOn = "Category",
+            FilterQuery = categoryName
+        };
+        
+        var products = await _productService.GetAllProductsAsync(categoryQuery);
 
         return new ApiResponse(true, null, products);
     }

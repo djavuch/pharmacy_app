@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.PromoCode;
+using PharmacyApp.Application.Contracts.PromoCode;
+using PharmacyApp.Application.Contracts.PromoCode.Results;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
 [ApiController]
-[Route("admin/promocodes")]
+[Route("admin/promo-codes")]
 [Authorize(Roles = "Admin")]
 public class PromoCodeController : ControllerBase
 {
@@ -57,31 +58,43 @@ public class PromoCodeController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreatePromoCodeDto dto)
+    public async Task<IActionResult> Create([FromBody] CreatePromoCodeDto createPromoCodeDtodto)
     {
-        var created = await _promoCodeService.CreatePromoCodeAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { id = created.PromoCodeId }, created);
+        var result = await _promoCodeService.CreatePromoCodeAsync(createPromoCodeDtodto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return CreatedAtAction(nameof(GetById), new { id = result.Value!.PromoCodeId }, result.Value);
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePromoCodeDto dto)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePromoCodeDto updatePromoCodeDto)
     {
-        await _promoCodeService.UpdatePromoCodeAsync(id, dto);
+        var result = await _promoCodeService.UpdatePromoCodeAsync(id, updatePromoCodeDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _promoCodeService.DeletePromoCodeAsync(id);
+        var result = await _promoCodeService.DeletePromoCodeAsync(id);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 
     [HttpPost("validate")]
     [AllowAnonymous]
-    public async Task<IActionResult> Validate([FromBody] ValidatePromoCodeDto dto)
+    public async Task<IActionResult> Validate([FromBody] PromoCodeValidationResults validationResults)
     {
-        var result = await _promoCodeService.ValidatePromoCodeAsync(dto);
+        var result = await _promoCodeService.ValidatePromoCodeAsync(validationResults);
 
         if (!result.IsValid)
         {
@@ -89,5 +102,23 @@ public class PromoCodeController : ControllerBase
         }
 
         return Ok(result);
+    }
+    
+    [HttpPatch("{id:guid}/activate")]
+    public async Task<IActionResult> Activate(Guid id)
+    {
+        var result = await _promoCodeService.ActivatePromoCodeAsync(id);
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        return NoContent();
+    }
+
+    [HttpPatch("{id:guid}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id)
+    {
+        var result = await _promoCodeService.DeactivatePromoCodeAsync(id);
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        return NoContent();
     }
 }

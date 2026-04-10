@@ -1,12 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.Admin.Review;
-using PharmacyApp.Application.DTOs.Review;
+﻿using PharmacyApp.Application.Contracts.Review;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class ReviewMappers
 {
-    public static ProductReviewDto ToProductReviewDto(this ReviewModel review) => new()
+    public static ProductReviewDto ToProductReviewDto(this Review review) => new()
     {
         Id = review.Id,
         ProductId = review.ProductId,

@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Review;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.Review;
 
 namespace PharmacyApp.Presentation.Controllers;
 
@@ -16,25 +17,24 @@ public class ReviewController : ControllerBase
          _reviewService = reviewService;
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetReview(int productId, int id)
     {
-        var review = await _reviewService.GetByIdAsync(id);
-        if (review is null) return NotFound();
-
-        if (review.ProductId != productId)
+        var result = await _reviewService.GetByIdAsync(id);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        if (result.Value!.ProductId != productId)
             return BadRequest("Review does not belong to this product.");
-
-        return Ok(review);
+        
+        return Ok(result.Value);
     }
 
     [HttpGet("all-reviews")]
-    public async Task<IActionResult> GetAllReviews(
-        int productId, 
-        int pageIndex = 1, 
-        int pageSize = 10)
+    public async Task<IActionResult> GetAllReviews(int productId, ReviewQueryParams queryParams)
     {
-        var reviews = await _reviewService.GetReviewsByProductIdAsync(productId, pageIndex, pageSize);
+        var reviews = await _reviewService.GetReviewsByProductIdAsync(productId, queryParams);
         return Ok(reviews);
     }
 
@@ -44,7 +44,7 @@ public class ReviewController : ControllerBase
     {
         if (productId != reviewDto.ProductId)
         {
-            return BadRequest("Product ID in URL does not match Product ID in body.");
+            return BadRequest("Product Id in URL does not match Product Id in body.");
         }
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -54,8 +54,11 @@ public class ReviewController : ControllerBase
             return Unauthorized();
         }
 
-        var createdReview = await _reviewService.AddReviewAsync(reviewDto, userId);
-
-        return CreatedAtAction(nameof(GetReview), new { productId, id = createdReview.Id }, createdReview);
+        var result = await _reviewService.AddReviewAsync(reviewDto, userId);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return CreatedAtAction(nameof(GetReview), new { productId, id = result.Value!.Id }, result.Value);
     }
 }

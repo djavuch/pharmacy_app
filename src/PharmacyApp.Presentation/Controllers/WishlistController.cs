@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Wishlist;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
+using PharmacyApp.Application.Contracts.Wishlist;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Presentation.Controllers;
@@ -34,28 +34,23 @@ public class WishlistController : ControllerBase
     public async Task<IActionResult> AddToWishlist(WishlistDto wishlistAddDto)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new UnauthorizedException("User is not authenticated.");
-        }
-
         var result = await _wishlistService.AddToWishlistAsync(wishlistAddDto, userId);
-        return Ok(result);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
 
-    [HttpDelete("{productId}")]
+    [HttpDelete("{productId:int}")]
     public async Task<IActionResult> RemoveFromWishlist(int productId)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrEmpty(userId))
-        {
-            throw new UnauthorizedException("User is not authenticated.");
-        }
-
-        await _wishlistService.RemoveFromWishlistAsync(userId, productId);
-
-        return Ok();
+        var result = await _wishlistService.RemoveFromWishlistAsync(userId, productId);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return NoContent();
     }
 }

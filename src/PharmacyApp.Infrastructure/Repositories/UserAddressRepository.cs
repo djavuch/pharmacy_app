@@ -14,7 +14,7 @@ public class UserAddressRepository : IUserAddressRepository
         _dbContext = dbContext;
     }
 
-    public async Task<List<UserAddressModel>> GetByUserIdAsync(string userId)
+    public async Task<List<UserAddress>> GetByUserIdAsync(string userId)
     {
         return await _dbContext.UserAddresses
             .Where(a => a.UserId == userId)
@@ -23,19 +23,24 @@ public class UserAddressRepository : IUserAddressRepository
             .ToListAsync();
     }
 
-    public async Task<UserAddressModel?> GetByIdAsync(int id)
+    public async Task<UserAddress?> GetByIdAsync(int id)
     {
         return await _dbContext.UserAddresses
             .FirstOrDefaultAsync(a => a.Id == id);
     }
 
-    public async Task<UserAddressModel?> GetDefaultByUserIdAsync(string userId)
+    public async Task SetDefaultAsync(int addressId, string userId)
     {
-        return await _dbContext.UserAddresses
-            .FirstOrDefaultAsync(a => a.UserId == userId && a.IsDefault);
+        await _dbContext.UserAddresses
+            .Where(a => a.UserId == userId && a.IsDefault)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.IsDefault, false));
+        
+        await _dbContext.UserAddresses
+            .Where(a => a.Id == addressId)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.IsDefault, true));
     }
 
-    public async Task<UserAddressModel> AddAsync(UserAddressModel address)
+    public async Task<UserAddress> AddAsync(UserAddress address)
     {
         if (address.IsDefault)
         {
@@ -44,18 +49,16 @@ public class UserAddressRepository : IUserAddressRepository
                 .ToListAsync();
 
             foreach (var existing in existingDefaults)
-            {
-                existing.IsDefault = false;
-            }
+                existing.UnsetDefault();
         }
 
         await _dbContext.UserAddresses.AddAsync(address);
         return address;
     }
 
-    public Task UpdateAsync(UserAddressModel address)
+    public Task UpdateAsync(UserAddress address)
     {
-        address.UpdatedAt = DateTime.UtcNow;
+        address.MarkUpdated();
         _dbContext.Entry(address).State = EntityState.Modified;
         return Task.CompletedTask;
     }

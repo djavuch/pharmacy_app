@@ -17,7 +17,7 @@ public class ShoppingCartRepository : IShoppingCartRepository
         _logger = logger;
     }
 
-    public async Task<ShoppingCartModel?> GetByUserIdAsync(string userId)
+    public async Task<ShoppingCart?> GetByUserIdAsync(string userId)
     {
         return await _dbContext.ShoppingCart
               .Include(sc => sc.Items)
@@ -25,7 +25,7 @@ public class ShoppingCartRepository : IShoppingCartRepository
               .FirstOrDefaultAsync(sc => sc.UserId == userId);
     }
 
-    public async Task<ShoppingCartModel?> GetBySessionIdAsync(string sessionId)
+    public async Task<ShoppingCart?> GetBySessionIdAsync(string sessionId)
     {
         return await _dbContext.ShoppingCart
               .Include(sc => sc.Items)
@@ -33,7 +33,7 @@ public class ShoppingCartRepository : IShoppingCartRepository
               .FirstOrDefaultAsync(sc => sc.SessionId == sessionId);
     }
 
-    public async Task<ShoppingCartModel?> GetByUserOrSessionAsync(string? userId, string? sessionId)
+    public async Task<ShoppingCart?> GetByUserOrSessionAsync(string? userId, string? sessionId)
     {
         if (!string.IsNullOrEmpty(userId))
         {
@@ -51,30 +51,30 @@ public class ShoppingCartRepository : IShoppingCartRepository
         return null;
     }
 
-    public async Task<CartItemModel?> GetItemAsync(int cartId, int productId)
+    public async Task<CartItem?> GetItemAsync(int cartId, int productId)
     {
         return await _dbContext.CartItems
             .FirstOrDefaultAsync(ci => ci.CartId == cartId && ci.ProductId == productId);
     }
 
-    public async Task<ShoppingCartModel> AddAsync(ShoppingCartModel cart)
+    public async Task<ShoppingCart> AddAsync(ShoppingCart cart)
     {
         await _dbContext.ShoppingCart.AddAsync(cart);
         return cart;
     }
 
-    public Task UpdateAsync(ShoppingCartModel cart)
+    public Task UpdateAsync(ShoppingCart cart)
     {
         _dbContext.ShoppingCart.Update(cart);
         return Task.CompletedTask;
     }
 
-    public async Task AddItemAsync(CartItemModel cartItem)
+    public async Task AddItemAsync(CartItem cartItem)
     {
         await _dbContext.CartItems.AddAsync(cartItem);
     }
 
-    public Task UpdateItemAsync(CartItemModel cartItem)
+    public Task UpdateItemAsync(CartItem cartItem)
     {
         _dbContext.CartItems.Update(cartItem);
         return Task.CompletedTask;
@@ -119,8 +119,8 @@ public class ShoppingCartRepository : IShoppingCartRepository
             _logger.LogInformation("No existing user cart, converting session cart to user cart - UserId: {UserId}",
                 userId);
 
-            sessionCart.UserId = userId;
-            sessionCart.SessionId = null;
+            sessionCart.AssignToUser(userId);
+            sessionCart.AssignToGuest(null);
             _dbContext.ShoppingCart.Update(sessionCart);
 
             _logger.LogInformation("Session cart converted to user cart - CartId: {CartId}, UserId: {UserId}",
@@ -138,12 +138,12 @@ public class ShoppingCartRepository : IShoppingCartRepository
             {
                 var existingItem = await GetItemAsync(userCart.Id, item.ProductId);
 
-                if (existingItem != null)
+                if (existingItem is not null)
                 {
                     _logger.LogInformation("Updating existing item - ProductId: {ProductId}, OldQty: {OldQty}, AddingQty: {AddingQty}",
                         item.ProductId, existingItem.Quantity, item.Quantity);
 
-                    existingItem.Quantity += item.Quantity;
+                    existingItem.AddQuantity(item.Quantity);
                     _dbContext.CartItems.Update(existingItem);
                     updatedItems++;
                 }
@@ -152,13 +152,7 @@ public class ShoppingCartRepository : IShoppingCartRepository
                     _logger.LogInformation("Adding new item to user cart - ProductId: {ProductId}, Qty: {Quantity}",
                         item.ProductId, item.Quantity);
 
-                    var newItem = new CartItemModel
-                    {
-                        CartId = userCart.Id,
-                        ProductId = item.ProductId,
-                        Quantity = item.Quantity,
-                        PriceAtAdd = item.PriceAtAdd
-                    };
+                    var newItem = new CartItem(userCart.Id, item.ProductId, item.Quantity, item.PriceAtAdd);
                     await _dbContext.CartItems.AddAsync(newItem);
                     mergedItems++;
                 }

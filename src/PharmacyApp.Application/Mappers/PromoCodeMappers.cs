@@ -1,11 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.PromoCode;
+﻿using PharmacyApp.Application.Contracts.PromoCode;
 using PharmacyApp.Domain.Entities.PromoCode;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class PromoCodeMapperExtensions
 {
-    public static PromoCodeDto ToPromoCodeDto(this PromoCodeModel promoCode) => new()
+    public static PromoCodeDto ToPromoCodeDto(this PromoCode promoCode) => new()
     {
         PromoCodeId = promoCode.PromoCodeId,
         Code = promoCode.Code,

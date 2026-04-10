@@ -1,9 +1,10 @@
 ﻿using FluentValidation;
-using PharmacyApp.Application.DTOs.PromoCode;
+using PharmacyApp.Application.Contracts.PromoCode;
+using PharmacyApp.Application.Contracts.PromoCode.Results;
 
 namespace PharmacyApp.Application.DTOValidations.AdminValidations.PromoCode;
 
-public class ValidatePromoCodeDtoValidator : AbstractValidator<ValidatePromoCodeDto>
+public class ValidatePromoCodeDtoValidator : AbstractValidator<PromoCodeValidationResults>
 {
     public ValidatePromoCodeDtoValidator()
     {

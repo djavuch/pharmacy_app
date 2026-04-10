@@ -1,5 +1,6 @@
 ﻿using PharmacyApp.Application.Interfaces;
 using System.Threading.Channels;
+using PharmacyApp.Application.Interfaces.Abstractions;
 
 namespace PharmacyApp.Infrastructure.Repositories;
 

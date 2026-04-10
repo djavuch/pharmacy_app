@@ -4,18 +4,18 @@ using PharmacyApp.Domain.Entities;
 namespace PharmacyApp.Application.Interfaces.Repositories;
 public interface IAuthRepository
 {
-    Task<IdentityResult> RegisterAsync(UserModel user, string password);
-    Task<bool> CheckPasswordAsync(UserModel user, string password);
+    Task<IdentityResult> RegisterAsync(User user, string password);
+    Task<bool> CheckPasswordAsync(User user, string password);
     Task LogoutAsync();
-    Task<string> GenerateEmailConfirmationTokenAsync(UserModel user);
-    Task<string> GeneratePasswordResetTokenAsync(UserModel user);
-    Task<IdentityResult> ConfirmEmailAsync(UserModel user, string token);
-    Task<IdentityResult> ResetPasswordAsync(UserModel user, string token, string newPassword);
-    Task<IdentityResult> ChangePasswordAsync(UserModel user, string currentPassword, string newPassword);
-    Task<IdentityResult> AddToRoleAsync(UserModel user, string role);
-    Task<IdentityResult> UpdateSecurityStampAsync(UserModel user);
+    Task<string> GenerateEmailConfirmationTokenAsync(User user);
+    Task<string> GeneratePasswordResetTokenAsync(User user);
+    Task<IdentityResult> ConfirmEmailAsync(User user, string token);
+    Task<IdentityResult> ResetPasswordAsync(User user, string token, string newPassword);
+    Task<IdentityResult> ChangePasswordAsync(User user, string currentPassword, string newPassword);
+    Task<IdentityResult> AddToRoleAsync(User user, string role);
+    Task<IdentityResult> UpdateSecurityStampAsync(User user);
     
     // Admin specific
-    Task LockUserAsync(UserModel user, DateTimeOffset lockoutEnd);
-    Task UnlockUserAsync(UserModel user);
+    Task LockUserAsync(User user, DateTimeOffset lockoutEnd);
+    Task UnlockUserAsync(User user);
 }

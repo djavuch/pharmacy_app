@@ -1,4 +1,4 @@
-﻿namespace PharmacyApp.Application.Interfaces;
+﻿namespace PharmacyApp.Application.Interfaces.Abstractions;
 
 public interface IBackgroundTaskQueue
 {

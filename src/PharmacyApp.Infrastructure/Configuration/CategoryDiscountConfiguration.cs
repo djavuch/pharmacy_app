@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities.Discount;
 
 namespace PharmacyApp.Infrastructure.Configuration.Discount;
 
-public class CategoryDiscountConfiguration : IEntityTypeConfiguration<CategoryDiscountModel>
+public class CategoryDiscountConfiguration : IEntityTypeConfiguration<CategoryDiscount>
 {
-    public void Configure(EntityTypeBuilder<CategoryDiscountModel> builder)
+    public void Configure(EntityTypeBuilder<CategoryDiscount> builder)
     {
         builder.HasKey(cd => new { cd.CategoryId, cd.DiscountId });
 

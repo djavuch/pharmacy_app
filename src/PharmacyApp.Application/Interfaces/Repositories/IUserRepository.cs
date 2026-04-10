@@ -1,21 +1,21 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using PharmacyApp.Application.DTOs.Common;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Interfaces.Repositories;
 
 public interface IUserRepository
 {
-    Task<UserModel?> GetByIdAsync(string userId);
-    Task<UserModel?> GetByEmailAsync(string email); // needs to checking existing email during registration
-    Task<UserModel?> GetCurrentProfileAsync(string userId);
-    Task<PaginatedList<ReviewModel?>> GetCurrentReviews(string userId, int pageIndex, int pageSize);
-    Task<PaginatedList<OrderModel?>> GetCurrentOrders(string userId, int pageIndex, int pageSize);
-    Task UpdateAsync(UserModel user);
+    Task<User?> GetByIdAsync(string userId);
+    Task<User?> GetByEmailAsync(string email); // needs to checking existing email during registration
+    Task<User?> GetCurrentProfileAsync(string userId);
+    Task<PaginatedList<Review?>> GetCurrentReviews(string userId, int pageIndex, int pageSize);
+    Task<PaginatedList<Order?>> GetCurrentOrders(string userId, int pageIndex, int pageSize);
+    Task UpdateAsync(User user);
     Task<bool> AnyUserExistsAsync();
 
     // Admin specific
-    IQueryable<UserModel> GetAllAsync();
-    Task<IdentityResult> RemoveFromRolesAsync(UserModel user, IEnumerable<string> roles);
-    Task<IList<string>> GetRolesAsync(UserModel user);
+    IQueryable<User> GetAllAsync();
+    Task<IdentityResult> RemoveFromRolesAsync(User user, IEnumerable<string> roles);
+    Task<IList<string>> GetRolesAsync(User user);
 }

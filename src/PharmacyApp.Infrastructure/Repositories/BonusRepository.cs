@@ -14,13 +14,13 @@ public class BonusRepository : IBonusRepository
         _dbContext = dbContext;
     }
 
-    public async Task<BonusAccountModel?> GetByUserIdAsync(string userId)
+    public async Task<BonusAccount?> GetByUserIdAsync(string userId)
     {
         return await _dbContext.BonusAccounts
             .FirstOrDefaultAsync(b => b.UserId == userId);
     }
 
-    public async Task<IEnumerable<BonusAccountModel>> GetAllAccountsAsync(int pageIndex, int pageSize)
+    public async Task<IEnumerable<BonusAccount>> GetAllAccountsAsync(int pageIndex, int pageSize)
     {
         return await _dbContext.BonusAccounts
             .OrderByDescending(b => b.Balance)
@@ -29,27 +29,27 @@ public class BonusRepository : IBonusRepository
             .ToListAsync();
     }
 
-    public async Task<BonusAccountModel> CreateAsync(BonusAccountModel account)
+    public async Task<BonusAccount> CreateAsync(BonusAccount account)
     {
         _dbContext.BonusAccounts.Add(account);
         await _dbContext.SaveChangesAsync();
         return account;
     }
 
-    public async Task UpdateAsync(BonusAccountModel account)
+    public async Task UpdateAsync(BonusAccount account)
     {
-        account.UpdatedAt = DateTime.UtcNow;
+        account.UpdateTimestamp();
         _dbContext.BonusAccounts.Update(account);
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task AddTransactionAsync(BonusTransactionModel transaction)
+    public async Task AddTransactionAsync(BonusTransaction transaction)
     {
         _dbContext.BonusTransactions.Add(transaction);
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task<IEnumerable<BonusTransactionModel>> GetTransactionsAsync(
+    public async Task<IEnumerable<BonusTransaction>> GetTransactionsAsync(
         string userId, int pageIndex, int pageSize)
     {
         return await _dbContext.BonusTransactions
@@ -60,19 +60,19 @@ public class BonusRepository : IBonusRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<BonusTransactionModel>> GetTransactionsByOrderIdAsync(int orderId)
+    public async Task<IEnumerable<BonusTransaction>> GetTransactionsByOrderIdAsync(int orderId)
     {
         return await _dbContext.BonusTransactions
             .Where(t => t.OrderId == orderId)
             .ToListAsync();
     }
 
-    public async Task<BonusSettingsModel> GetSettingsAsync()
+    public async Task<BonusSettings> GetSettingsAsync()
     {
         return await _dbContext.BonusSettings.FirstAsync(s => s.Id == 1);
     }
 
-    public async Task UpdateSettingsAsync(BonusSettingsModel settings)
+    public async Task UpdateSettingsAsync(BonusSettings settings)
     {
         settings.UpdatedAt = DateTime.UtcNow;
         _dbContext.BonusSettings.Update(settings);

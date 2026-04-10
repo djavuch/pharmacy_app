@@ -1,4 +1,4 @@
-﻿using PharmacyApp.Application.DTOs.Email;
+﻿using PharmacyApp.Application.Contracts.Notifications.Email;
 
 namespace PharmacyApp.Application.Interfaces.Email;
 

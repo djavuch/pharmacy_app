@@ -1,7 +1,12 @@
-﻿using PharmacyApp.Application.DTOs.PromoCode;
+﻿using Microsoft.Extensions.Caching.Hybrid;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Contracts.PromoCode;
+using PharmacyApp.Application.Contracts.PromoCode.Results;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities.PromoCode;
 using PharmacyApp.Domain.Enums;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
@@ -11,78 +16,67 @@ namespace PharmacyApp.Application.Services;
 public class PromoCodeService : IPromoCodeService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
+    private readonly HybridCache _cache;
 
-    public PromoCodeService(IUnitOfWorkRepository unitOfWork)
+    public PromoCodeService(IUnitOfWorkRepository unitOfWork,  HybridCache cache)
     {
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
-    public async Task<PromoCodeDto> CreatePromoCodeAsync(CreatePromoCodeDto createPromoCodeDto)
+    public async Task<Result<PromoCodeDto>> CreatePromoCodeAsync(CreatePromoCodeDto createPromoCodeDto)
     {
         if (!Enum.TryParse<DiscountType>(createPromoCodeDto.DiscountType, ignoreCase: true, out var discountType))
-        {
-            throw new BadRequestException(
-                $"Invalid discount type: '{createPromoCodeDto.DiscountType}'. Valid values: {string.Join(", ", Enum.GetNames<DiscountType>())}.");
-        }
-
-        // Проверка уникальности кода
+            return Result<PromoCodeDto>.Conflict(
+                $"Invalid discount type: '{createPromoCodeDto.DiscountType}'." +
+                $" Valid values: {string.Join(", ", Enum.GetNames<DiscountType>())}.");
+        
         var codeExists = await _unitOfWork.PromoCodes.CodeExistsAsync(createPromoCodeDto.Code.ToUpper());
         if (codeExists)
-        {
             throw new BadRequestException($"Promo code '{createPromoCodeDto.Code}' already exists.");
-        }
 
-        var promoCode = new PromoCodeModel
-        {
-            PromoCodeId = Guid.NewGuid(),
-            Code = createPromoCodeDto.Code.ToUpper(),
-            Description = createPromoCodeDto.Description,
-            DiscountType = discountType,
-            Value = createPromoCodeDto.Value,
-            StartDate = createPromoCodeDto.StartDate,
-            EndDate = createPromoCodeDto.EndDate,
-            IsActive = createPromoCodeDto.IsActive,
-            MaxUsageCount = createPromoCodeDto.MaxUsageCount,
-            MaxUsagePerUser = createPromoCodeDto.MaxUsagePerUser,
-            MinimumOrderAmount = createPromoCodeDto.MinimumOrderAmount,
-            MaximumDiscountAmount = createPromoCodeDto.MaximumDiscountAmount,
-            ApplicableToAllProducts = createPromoCodeDto.ApplicableToAllProducts
-        };
+        var promoCode = new PromoCode(createPromoCodeDto.Code, createPromoCodeDto.Description, discountType,
+            createPromoCodeDto.Value, createPromoCodeDto.StartDate, createPromoCodeDto.EndDate, 
+            createPromoCodeDto.ApplicableToAllProducts, createPromoCodeDto.MaxUsageCount, createPromoCodeDto.MaxUsagePerUser,
+            createPromoCodeDto.MinimumOrderAmount, createPromoCodeDto.MaximumDiscountAmount);
 
-        promoCode.ValidateBusinessRules();
-
-        if (!promoCode.ApplicableToAllProducts)
-        {
-            promoCode.PromoCodeProducts = (createPromoCodeDto.ProductIds ?? [])
-                .Select(pid => new PromoCodeProductModel { ProductId = pid, PromoCodeId = promoCode.PromoCodeId })
-                .ToList();
-
-            promoCode.PromoCodeCategories = (createPromoCodeDto.CategoryIds ?? [])
-                .Select(cid => new PromoCodeCategoryModel { CategoryId = cid, PromoCodeId = promoCode.PromoCodeId })
-                .ToList();
-        }
+        promoCode.UpdateApplicableProducts(
+            createPromoCodeDto.ProductIds,
+            createPromoCodeDto.CategoryIds);
 
         var createdPromoCode = await _unitOfWork.PromoCodes.AddAsync(promoCode);
         await _unitOfWork.SaveChangesAsync();
-        return createdPromoCode.ToPromoCodeDto();
+        return  Result<PromoCodeDto>.Success(createdPromoCode.ToPromoCodeDto());
     }
 
     public async Task<PromoCodeDto?> GetPromoCodeByIdAsync(Guid promoCodeId)
     {
-        var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
-        return promoCode?.ToPromoCodeDto();
+        return await _cache.GetOrCreateAsync(
+            CacheKeys.Discounts.ById(promoCodeId),
+            async _ =>
+            {
+                var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
+                return promoCode?.ToPromoCodeDto();
+            });
     }
 
     public async Task<PromoCodeDto?> GetPromoCodeByCodeAsync(string code)
     {
-        var promoCode = await _unitOfWork.PromoCodes.GetByCodeAsync(code);
-        return promoCode?.ToPromoCodeDto();
+        return await _cache.GetOrCreateAsync(CacheKeys.PromoCodes.ByCode(code.ToUpper()),
+            async _ =>
+            {
+                var promoCode = await _unitOfWork.PromoCodes.GetByCodeAsync(code.ToUpper());
+                return promoCode?.ToPromoCodeDto();
+            });
     }
 
     public async Task<IEnumerable<PromoCodeDto>> GetAllPromoCodesAsync()
     {
-        var promoCodes = await _unitOfWork.PromoCodes.GetAllAsync();
-        return promoCodes.Select(p => p.ToPromoCodeDto());
+        return await _cache.GetOrCreateAsync(CacheKeys.PromoCodes.All, async _ =>
+        {
+            var promoCodes = await _unitOfWork.PromoCodes.GetAllAsync();
+            return promoCodes.Select(p => p.ToPromoCodeDto());
+        }); 
     }
 
     public async Task<IEnumerable<PromoCodeDto>> GetActivePromoCodesAsync()
@@ -91,78 +85,89 @@ public class PromoCodeService : IPromoCodeService
         return promoCodes.Select(p => p.ToPromoCodeDto());
     }
 
-    public async Task UpdatePromoCodeAsync(Guid promoCodeId, UpdatePromoCodeDto updatePromoCodeDto)
+    public async Task<Result> UpdatePromoCodeAsync(Guid promoCodeId, UpdatePromoCodeDto updatePromoCodeDto)
     {
         if (!Enum.TryParse<DiscountType>(updatePromoCodeDto.DiscountType, ignoreCase: true, out var discountType))
-        {
-            throw new BadRequestException(
+            return Result.Conflict(
                 $"Invalid discount type: '{updatePromoCodeDto.DiscountType}'. Valid values: {string.Join(", ", Enum.GetNames<DiscountType>())}.");
-        }
-
+        
         var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
 
         if (promoCode is null)
-        {
-            throw new NotFoundException("Promo code not found.");
-        }
+            return Result.NotFound("Promo code not found.");
 
         // Check if the new code (if changed) is unique
         var codeExists = await _unitOfWork.PromoCodes.CodeExistsAsync(updatePromoCodeDto.Code.ToUpper(), promoCodeId);
         if (codeExists)
-        {
-            throw new BadRequestException($"Promo code '{updatePromoCodeDto.Code}' already exists.");
-        }
+            return Result.Failure($"Promo code '{updatePromoCodeDto.Code}' already exists.", 409);
+        
+        promoCode.Update(updatePromoCodeDto.Code.ToUpper(), updatePromoCodeDto.Description, discountType,
+            updatePromoCodeDto.Value, updatePromoCodeDto.StartDate, updatePromoCodeDto.EndDate, updatePromoCodeDto.ApplicableToAllProducts,
+            updatePromoCodeDto.MaxUsageCount, updatePromoCodeDto.MaxUsagePerUser, updatePromoCodeDto.MinimumOrderAmount,
+            updatePromoCodeDto.MaximumDiscountAmount
+        );
 
-        promoCode.Code = updatePromoCodeDto.Code.ToUpper();
-        promoCode.Description = updatePromoCodeDto.Description;
-        promoCode.DiscountType = discountType;
-        promoCode.Value = updatePromoCodeDto.Value;
-        promoCode.StartDate = updatePromoCodeDto.StartDate;
-        promoCode.EndDate = updatePromoCodeDto.EndDate;
-        promoCode.IsActive = updatePromoCodeDto.IsActive;
-        promoCode.MaxUsageCount = updatePromoCodeDto.MaxUsageCount;
-        promoCode.MaxUsagePerUser = updatePromoCodeDto.MaxUsagePerUser;
-        promoCode.MinimumOrderAmount = updatePromoCodeDto.MinimumOrderAmount;
-        promoCode.MaximumDiscountAmount = updatePromoCodeDto.MaximumDiscountAmount;
-        promoCode.ApplicableToAllProducts = updatePromoCodeDto.ApplicableToAllProducts;
-
-        promoCode.ValidateBusinessRules();
-
-        promoCode.PromoCodeProducts.Clear();
-        promoCode.PromoCodeCategories.Clear();
-
-        if (!promoCode.ApplicableToAllProducts)
-        {
-            foreach (var pid in updatePromoCodeDto.ProductIds ?? [])
-            {
-                promoCode.PromoCodeProducts.Add(new PromoCodeProductModel { ProductId = pid, PromoCodeId = promoCodeId });
-            }
-
-            foreach (var cid in updatePromoCodeDto.CategoryIds ?? [])
-            {
-                promoCode.PromoCodeCategories.Add(new PromoCodeCategoryModel { CategoryId = cid, PromoCodeId = promoCodeId });
-            }
-        }
-
+        promoCode.UpdateApplicableProducts(
+            updatePromoCodeDto.ProductIds,   
+            updatePromoCodeDto.CategoryIds);
+        
         await _unitOfWork.PromoCodes.UpdateAsync(promoCode);
         await _unitOfWork.SaveChangesAsync();
+        
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.All);
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.Active);
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.ById(promoCodeId));
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.ByCode(promoCode.Code));
+        
+        return Result.Success();
     }
 
-    public async Task DeletePromoCodeAsync(Guid promoCodeId)
+    public async Task<Result> DeletePromoCodeAsync(Guid promoCodeId)
     {
         var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
         if (promoCode is null)
-        {
-            throw new NotFoundException("Promo code not found.");
-        }
-
+            return Result.NotFound("Promo code not found.");
+        
         await _unitOfWork.PromoCodes.DeleteAsync(promoCodeId);
         await _unitOfWork.SaveChangesAsync();
+        
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.All);
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.Active);
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.ById(promoCodeId));
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.ByCode(promoCode.Code));
+        
+        return Result.Success();
+    }
+    
+    public async Task<Result> ActivatePromoCodeAsync(Guid promoCodeId)
+    {
+        var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
+        if (promoCode is null)
+            return Result.NotFound("Promo code not found.");
+
+        promoCode.Activate(); 
+
+        await _unitOfWork.PromoCodes.UpdateAsync(promoCode);
+        await _unitOfWork.SaveChangesAsync();
+        return Result.Success();
     }
 
-    public async Task<PromoCodeValidationResultDto> ValidatePromoCodeAsync(ValidatePromoCodeDto validateDto)
+    public async Task<Result> DeactivatePromoCodeAsync(Guid promoCodeId)
     {
-        var promoCode = await _unitOfWork.PromoCodes.GetByCodeAsync(validateDto.Code);
+        var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
+        if (promoCode is null)
+            return Result.NotFound("Promo code not found.");
+
+        promoCode.Deactivate();
+
+        await _unitOfWork.PromoCodes.UpdateAsync(promoCode);
+        await _unitOfWork.SaveChangesAsync();
+        return Result.Success();
+    }
+
+    public async Task<PromoCodeValidationResultDto> ValidatePromoCodeAsync(PromoCodeValidationResults validationResults)
+    {
+        var promoCode = await _unitOfWork.PromoCodes.GetByCodeAsync(validationResults.Code);
 
         if (promoCode is null)
             return new PromoCodeValidationResultDto
@@ -178,14 +183,14 @@ public class PromoCodeService : IPromoCodeService
                 Message = "Promo code is expired or inactive."
             };
 
-        if (!promoCode.CanBeUsedByUser(validateDto.UserId))
+        if (!promoCode.CanBeUsedByUser(validationResults.UserId))
             return new PromoCodeValidationResultDto
             {
                 IsValid = false,
                 Message = "You have exceeded the maximum usage limit for this promo code."
             };
 
-        if (promoCode.MinimumOrderAmount.HasValue && validateDto.OrderAmount < promoCode.MinimumOrderAmount.Value)
+        if (promoCode.MinimumOrderAmount.HasValue && validationResults.OrderAmount < promoCode.MinimumOrderAmount.Value)
             return new PromoCodeValidationResultDto
             {
                 IsValid = false,
@@ -195,10 +200,10 @@ public class PromoCodeService : IPromoCodeService
         // Check if promo code is applicable to specific products
         if (!promoCode.ApplicableToAllProducts)
         {
-            var hasApplicableProducts = validateDto.ProductIds.Any(pid =>
+            var hasApplicableProducts = validationResults.ProductIds.Any(pid =>
                 promoCode.PromoCodeProducts.Any(p => p.ProductId == pid));
 
-            var matchesCategory = validateDto.CategoryIds.Any(cid =>
+            var matchesCategory = validationResults.CategoryIds.Any(cid =>
                 promoCode.PromoCodeCategories.Any(c => c.CategoryId == cid));
 
             if (!hasApplicableProducts && !matchesCategory)
@@ -210,7 +215,7 @@ public class PromoCodeService : IPromoCodeService
         }
 
         // Calculate discount amount
-        var discountAmount = CalculateDiscount(promoCode, validateDto.OrderAmount);
+        var discountAmount = CalculateDiscount(promoCode, validationResults.OrderAmount);
 
         return new PromoCodeValidationResultDto
         {
@@ -221,7 +226,7 @@ public class PromoCodeService : IPromoCodeService
         };
     }
 
-    private static decimal CalculateDiscount(PromoCodeModel promoCode, decimal orderAmount)
+    private static decimal CalculateDiscount(PromoCode promoCode, decimal orderAmount)
     {
         decimal discount = promoCode.DiscountType == DiscountType.Percentage
             ? orderAmount * (promoCode.Value / 100)

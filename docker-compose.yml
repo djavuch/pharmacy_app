@@ -4,11 +4,32 @@ services:
     build:
       context: .
       dockerfile: src/PharmacyApp.WebApi/Dockerfile
+    environment:
+      ConnectionStrings__PharmacyAppConnection: Host=postgresdb;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: 5000
+      ASPNETCORE_URLS: "http://0.0.0.0:5000"
+      JwtSettings__SecretKey: ${JWT_SECRET}
+      JwtSettings__Issuer: ${JWT_ISSUER}
+      JwtSettings__Audience: ${JWT_AUDIENCE}
+      JwtSettings__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES}
+      EmailConfiguration__SmtpServer: ${MAIL_SMTP_SERVER}
+      EmailConfiguration__SmtpPort: ${MAIL_SMTP_PORT}
+      EmailConfiguration__FromName: ${MAIL_FROM_NAME}
+      EmailConfiguration__FromEmail: ${MAIL_FROM_EMAIL}
+      EmailConfiguration__SmtpUser: ${MAIL_SMTP_USER}
+      EmailConfiguration__SmtpPassword: ${MAIL_SMTP_PASSWORD}
+      AdminBootstrap__Enabled: ${ADMIN_BOOTSTRAP_ENABLED}
+      AdminBootstrap__Email: ${ADMIN_BOOTSTRAP_EMAIL}
+      AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD}
+      AdminBootstrap__FirstName: ${ADMIN_BOOTSTRAP_FIRSTNAME}
+      AdminBootstrap__LastName: ${ADMIN_BOOTSTRAP_LASTNAME}
+      AdminBootstrap__RequirePasswordReset: ${ADMIN_BOOTSTRAP_REQUIREPASSWORDRESET}
     ports:
-       - "5000:5000"
-       - "5001:5001"
+      - "5000:5000"
     depends_on:
-      - postgresdb
+      postgresdb:
+        condition: service_healthy
   postgresdb:
     image: postgres:17
     container_name: pharmacyapp-postgres-container
@@ -20,18 +41,26 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-    - local_pgdata:/var/lib/postgresql/data
+      - local_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
   pgadmin:
-     image: dpage/pgadmin4
-     container_name: pharmacyapp-pgadmin-container
-     restart: always
-     ports:
+    image: dpage/pgadmin4
+    container_name: pharmacyapp-pgadmin-container
+    restart: always
+    ports:
         - "5050:80"
-     environment:
+    environment:
         PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
         PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
-     volumes:
+    depends_on:
+        postgresdb:
+          condition: service_healthy
+    volumes:
         - pgadmin-data:/var/lib/pgadmin
 volumes:
-   local_pgdata:
-   pgadmin-data: 
+  local_pgdata:
+  pgadmin-data:

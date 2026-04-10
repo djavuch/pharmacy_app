@@ -1,20 +1,20 @@
-﻿using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.User.UserProfileDto;
+﻿using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.User.Admin;
+using PharmacyApp.Application.Contracts.User.Profile;
+using PharmacyApp.Domain.Common;
 
 namespace PharmacyApp.Application.Interfaces.Services;
 
 public interface IUserService 
 {
-    Task<UserDto?> GetUserByIdAsync(string userId);
-    Task<UserDto?> GetCurrentUserProfileAsync(string userId);
-    Task<PaginatedList<UserReviewsDto?>> GetUserReviewsAsync(string userId, int pageIndex, int pageSize);
-    Task<PaginatedList<UserOrdersDto?>> GetUserOrdersAsync(string userId, int pageIndex, int pageSize);
-    Task UpdateUserProfileAsync(UpdateUserDto updateUserDto);
+    Task<Result<UserProfileDto>> GetCurrentUserProfileAsync(string userId);
+    Task<PaginatedList<UserReviewSummaryDto?>> GetUserReviewsAsync(string userId, ReviewQueryParams queryParams);
+    Task<PaginatedList<UserOrderSummaryDto?>> GetUserOrdersAsync(string userId, QueryParams query);
+    Task<Result> UpdateUserProfileAsync(UpdateUserDto updateUserDto);
 
     // Admin specific
-    Task<PaginatedList<UserDto>> GetAllUsersAsync(int pageIndex = 1, int pageSize = 10, string? filterOn = null,
-        string? filterQuery = null, string? sortBy = null, bool isAscending = true);
-    Task<UserDto> LockUserAsync(string userId, DateTimeOffset? lockoutEnd = null);
-    Task<UserDto> UnlockUserAsync(string userId);
-    Task<UserDto> ChangeUserRoleAsync(string userId, string role);
+    Task<PaginatedList<AdminUserDto>> GetAllUsersAsync(QueryParams query);
+    Task<Result<AdminUserDto>> LockUserAsync(string userId, DateTimeOffset? lockoutEnd = null);
+    Task<Result<AdminUserDto>> UnlockUserAsync(string userId);
+    Task<Result<AdminUserDto>> ChangeUserRoleAsync(string userId, string role);
 }

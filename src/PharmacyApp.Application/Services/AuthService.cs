@@ -1,16 +1,17 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
-using PharmacyApp.Application.DTOs.User.AccountDto;
-using PharmacyApp.Application.DTOs.User.Enums;
-using PharmacyApp.Application.DTOs.User.UserProfileDto;
-using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Services; 
 using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Entities;
 using System.Text;
+using PharmacyApp.Application.Contracts.User.Account;
+using PharmacyApp.Application.Contracts.User.Profile;
+using PharmacyApp.Application.Contracts.User.Results;
+using PharmacyApp.Application.Interfaces.Abstractions;
+using PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 using PharmacyApp.Application.Interfaces.Email;
-using PharmacyApp.Infrastructure.Abstractions.Authentication;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
+using PharmacyApp.Application.Interfaces.Repositories;
+using PharmacyApp.Domain.Common;
 
 namespace PharmacyApp.Application.Services;
 
@@ -34,16 +35,16 @@ public class AuthService : IAuthService
         _serviceProvider = serviceProvider;
     }
 
-    public async Task<UserDto?> UserRegisterAsync(UserRegistrationDto userRegistrationDto, string scheme, string host)
+    public async Task<Result<UserProfileDto>> UserRegisterAsync(UserRegistrationDto userRegistrationDto, string scheme, string host)
     {
         var existingUser = await _unitOfWork.Users.GetByEmailAsync(userRegistrationDto.Email);
 
         if (existingUser is not null)
         {
-            throw new ConflictException("User with this email already exists.");
+            return Result<UserProfileDto>.Conflict("User with this email already exists.");
         }
         
-        var newUser = new UserModel
+        var newUser = new User
         {
             UserName = userRegistrationDto.Email,
             Email = userRegistrationDto.Email,
@@ -58,7 +59,9 @@ public class AuthService : IAuthService
 
         if (!result.Succeeded)
         {
-            throw new BadRequestException("User registration failed: " + string.Join(", ", (IEnumerable<string>)result.Errors.Select(e => e.Description)));
+            return Result<UserProfileDto>
+                .BadRequest("User registration failed: "
+                            + string.Join(", ", result.Errors.Select(e => e.Description)));
         }
         
         await _unitOfWork.Auth.AddToRoleAsync(newUser, "Customer");
@@ -73,47 +76,60 @@ public class AuthService : IAuthService
             await emailService.SendEmailForRegisterConfirmationAsync(newUser, token, scheme, host, ct);
         });
 
-        return newUser.ToUserDto(); 
+        return Result<UserProfileDto>.Success(newUser.ToUserDto()); 
     }
 
-    public async Task<bool> ConfirmEmailAsync(string userId, string token)
+    public async Task<Result<bool>> ConfirmEmailAsync(string userId, string token)
     {
         if (userId is null || string.IsNullOrEmpty(token))
         {
-            throw new BadRequestException("User ID and token are required for email confirmation.");
+            return Result<bool>.BadRequest("User ID and token are required for email confirmation.");
         }
 
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
 
         if (user is null)
         {
-            throw new BadRequestException("User not found or revoked.");
+            return Result<bool>.NotFound("User not found for email confirmation.");
         }
 
-        var decodedToken = WebEncoders.Base64UrlDecode(token);
-        var normalizedToken = Encoding.UTF8.GetString(decodedToken);
-
+        string normalizedToken;
+        try
+        {
+            var decodedToken = WebEncoders.Base64UrlDecode(token);
+            normalizedToken = Encoding.UTF8.GetString(decodedToken);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException)
+        {
+            return Result<bool>.BadRequest("Invalid email confirmation token.");
+        }
 
         var result = await _unitOfWork.Auth.ConfirmEmailAsync(user, normalizedToken);
 
-        return result.Succeeded;
+        if (!result.Succeeded)
+        {
+            return Result<bool>.BadRequest(
+                string.Join(", ", result.Errors.Select(e => e.Description)));
+        }
+
+        return Result<bool>.Success(true);
     }
 
-    public async Task<bool> ResendConfirmationEmailAsync(string email, string scheme, string host)
+    public async Task<Result<bool>> ResendConfirmationEmailAsync(string email, string scheme, string host)
     {
         var user = await _unitOfWork.Users.GetByEmailAsync(email);
 
         if (user is null || user.EmailConfirmed)
         {
-            return true;
+            return Result<bool>.NotFound("User not found for email confirmation.");
         }
 
         var stampUpdateResult = await _unitOfWork.Auth.UpdateSecurityStampAsync(user);
         if (!stampUpdateResult.Succeeded)
         {
-            throw new BadRequestException(
-                "Failed to regenerate confirmation token: " + 
-                string.Join(", ", stampUpdateResult.Errors.Select(e => e.Description)));
+            return Result<bool>
+                .BadRequest("Failed to regenerate confirmation token: " + 
+                            string.Join(", ", stampUpdateResult.Errors.Select(e => e.Description)));
         }
         
         var token = await _unitOfWork.Auth.GenerateEmailConfirmationTokenAsync(user);
@@ -125,16 +141,16 @@ public class AuthService : IAuthService
             await emailService.SendEmailForRegisterConfirmationAsync(user, token, scheme, host, ct);
         });
 
-        return true;
+        return Result<bool>.Success(true);
     }
 
-    public async Task<bool> ForgotPasswordAsync(string email, string scheme, string host)
+    public async Task<Result<bool>> ForgotPasswordAsync(string email, string scheme, string host)
     {
         var user = await _unitOfWork.Users.GetByEmailAsync(email);
 
         if (user is null)
         {
-            throw new BadRequestException("If the email address was registered, you will receive an email with a link to restore it.");
+            return Result<bool>.Success(true, "If the email address was registered, you will receive an email with a link to restore it.");
         }
 
         var token = await _unitOfWork.Auth.GeneratePasswordResetTokenAsync(user);
@@ -149,14 +165,14 @@ public class AuthService : IAuthService
             await emailService.SendEmailForResetPasswordAsync(user, token, scheme, host, ct);
         });
 
-        return true;
+        return Result<bool>.Success(true, "If the email address was registered, you will receive an email.");
     }
 
-    public async Task<IdentityResultDto> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
+    public async Task<IdentityOperationResult> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
     {
         if (resetPasswordDto.NewPassword != resetPasswordDto.ConfirmPassword)
         {
-            return new IdentityResultDto
+            return new IdentityOperationResult
             {
                 Succeeded = false,
                 Errors = ["Passwords do not match."]
@@ -167,7 +183,7 @@ public class AuthService : IAuthService
 
         if (user is null)
         {
-            return new IdentityResultDto
+            return new IdentityOperationResult
             {
                 Succeeded = true,
             };
@@ -184,25 +200,30 @@ public class AuthService : IAuthService
             await _unitOfWork.Users.UpdateAsync(user);
         }
 
-        return new IdentityResultDto
+        return new IdentityOperationResult
         {
             Succeeded = result.Succeeded,
             Errors = result.Errors.Select(e => e.Description)
         };
     }
 
-    public async Task<LoginResultDto> LoginAsync(UserLoginDto userLoginDto)
+    public async Task<LoginResult> LoginAsync(UserLoginDto userLoginDto)
     {
         if (string.IsNullOrEmpty(userLoginDto.Email) || string.IsNullOrEmpty(userLoginDto.Password))
         {
-            throw new BadRequestException("Email and password are required.");
+            return new LoginResult
+            {
+                Succeeded = false,
+                FailureReason = LoginFailureReason.InvalidCredentials,
+                Message = "Email and password are required."
+            };
         }
 
         var user = await _unitOfWork.Users.GetByEmailAsync(userLoginDto.Email);
 
         if (user is null)
         {
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 FailureReason = LoginFailureReason.InvalidCredentials,
@@ -212,7 +233,7 @@ public class AuthService : IAuthService
 
         if (!user.EmailConfirmed)
         {
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 FailureReason = LoginFailureReason.EmailNotConfirmed,
@@ -222,7 +243,7 @@ public class AuthService : IAuthService
 
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
         {
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 FailureReason = LoginFailureReason.AccountLocked,
@@ -232,7 +253,7 @@ public class AuthService : IAuthService
         
         if (user.IsPasswordReset)
         {
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 FailureReason = LoginFailureReason.PasswordResetRequired,
@@ -244,7 +265,7 @@ public class AuthService : IAuthService
 
         if (!signInResult)
         {
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 FailureReason = LoginFailureReason.InvalidCredentials,
@@ -255,18 +276,12 @@ public class AuthService : IAuthService
         var claims = await _claimsService.GenerateUserClaimsAsync(user.Id, user.Email);
         var token = _jwtTokenProvider.GenerateToken(claims);
         var refreshToken = _jwtTokenProvider.GenerateRefreshToken();
-
-        var refreshTokenEntity = new RefreshTokenModel
-        {
-            Token = refreshToken,
-            UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()),
-            CreatedAt = DateTime.UtcNow
-        };
-
+        
+        var refreshTokenEntity = new RefreshToken(refreshToken, user.Id, DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
+        
         await _unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity);
 
-        return new LoginResultDto
+        return new LoginResult
         {
             Succeeded = true,
             UserId = user.Id,
@@ -276,18 +291,22 @@ public class AuthService : IAuthService
         };
     }
 
-    public async Task<LoginResultDto> RefreshTokenAsync(string refreshToken)
+    public async Task<LoginResult> RefreshTokenAsync(string refreshToken)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
-            throw new BadRequestException("Refresh token is required.");
+            return new LoginResult
+            {
+                Succeeded = false,
+                Message = "Refresh token is required."
+            };
         }
 
         var tokenEntity = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken);
 
         if (tokenEntity is null || !tokenEntity.IsActive)
         {
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 Message = "Invalid or expired refresh token."
@@ -298,12 +317,10 @@ public class AuthService : IAuthService
         
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
         {
-            
-            tokenEntity.IsRevoked = true;
-            tokenEntity.RevokedAt = DateTime.UtcNow;
+            tokenEntity.Revoke();
             await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity);
         
-            return new LoginResultDto
+            return new LoginResult
             {
                 Succeeded = false,
                 FailureReason = LoginFailureReason.AccountLocked,
@@ -312,26 +329,19 @@ public class AuthService : IAuthService
         }
 
         //  Revoke the old refresh token
-        tokenEntity.IsRevoked = true;
-        tokenEntity.RevokedAt = DateTime.UtcNow;
+        tokenEntity.Revoke();
         await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity);
 
         // Generate new JWT and refresh token
         var claims = await _claimsService.GenerateUserClaimsAsync(user.Id, user.Email);
         var newAccessToken = _jwtTokenProvider.GenerateToken(claims);
         var newRefreshToken = _jwtTokenProvider.GenerateRefreshToken();
-
-        var newRefreshTokenEntity = new RefreshTokenModel
-        {
-            Token = newRefreshToken,
-            UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()),
-            CreatedAt = DateTime.UtcNow
-        };
-
+        
+        var newRefreshTokenEntity = new RefreshToken(newRefreshToken, user.Id, DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
+        
         await _unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity);
 
-        return new LoginResultDto
+        return new LoginResult
         {
             Succeeded = true,
             Token = newAccessToken,
@@ -353,11 +363,11 @@ public class AuthService : IAuthService
         await _unitOfWork.Auth.LogoutAsync();
     }
 
-    public async Task<IdentityResultDto> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
+    public async Task<IdentityOperationResult> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
     {
         if (changePasswordDto.NewPassword != changePasswordDto.ConfirmPassword)
         {
-            return new IdentityResultDto
+            return new IdentityOperationResult
             {
                 Succeeded = false,
                 Errors = ["Passwords do not match."]
@@ -366,7 +376,7 @@ public class AuthService : IAuthService
         var user = await _unitOfWork.Users.GetByIdAsync(changePasswordDto.UserId);
         if (user is null)
         {
-            return new IdentityResultDto
+            return new IdentityOperationResult
             {
                 Succeeded = false,
                 Errors = ["User not found."]
@@ -377,7 +387,7 @@ public class AuthService : IAuthService
 
         if (!isCurrentPasswordValid)
         {
-            return new IdentityResultDto
+            return new IdentityOperationResult
             {
                 Succeeded = false,
                 Errors = ["Current password is incorrect."]
@@ -386,7 +396,7 @@ public class AuthService : IAuthService
 
         var result = await _unitOfWork.Auth.ChangePasswordAsync(user, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
 
-        return new IdentityResultDto
+        return new IdentityOperationResult
         {
             Succeeded = result.Succeeded,
             Errors = result.Errors.Select(e => e.Description)

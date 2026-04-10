@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItemModel>
+public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 {
-    public void Configure(EntityTypeBuilder<OrderItemModel> builder)
+    public void Configure(EntityTypeBuilder<OrderItem> builder)
     {
         builder.HasKey(oi => new { oi.OrderId, oi.ProductId });
 

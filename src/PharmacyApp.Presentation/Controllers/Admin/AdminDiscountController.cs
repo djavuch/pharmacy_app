@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Discount;
+using PharmacyApp.Application.Contracts.Discount;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
@@ -17,15 +17,13 @@ public class DiscountController : ControllerBase
         _discountService = discountService;
     }
 
-    /// <summary>Gets all discounts.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var discounts = await _discountService.GetAllDiscountsAsync();
         return Ok(discounts);
     }
-
-    /// <summary>Gets only currently active discounts.</summary>
+    
     [HttpGet("active")]
     [AllowAnonymous]
     public async Task<IActionResult> GetActive()
@@ -33,8 +31,7 @@ public class DiscountController : ControllerBase
         var discounts = await _discountService.GetActiveDiscountsAsync();
         return Ok(discounts);
     }
-
-    /// <summary>Gets a single discount by ID.</summary>
+    
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -44,32 +41,40 @@ public class DiscountController : ControllerBase
 
         return Ok(discount);
     }
-
-    /// <summary>Creates a new discount, optionally assigned to products/categories.</summary>
+    
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateDiscountDto dto)
+    public async Task<IActionResult> Create(CreateDiscountDto сreateDiscountDto)
     {
-        var created = await _discountService.CreateDiscountAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { id = created.DiscountId }, created);
+        var result = await _discountService.CreateDiscountAsync(сreateDiscountDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return CreatedAtAction(nameof(GetById), new { id = result.Value!.DiscountId }, result.Value);
     }
-
-    /// <summary>Updates an existing discount and replaces its product/category assignments.</summary>
+    
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDiscountDto dto)
+    public async Task<IActionResult> Update(Guid id, UpdateDiscountDto updateDiscountDto)
     {
-        await _discountService.UpdateDiscountAsync(id, dto);
+        var result = await _discountService.UpdateDiscountAsync(id, updateDiscountDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 
-    /// <summary>Deletes a discount.</summary>
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _discountService.DeleteDiscountAsync(id);
+        var result = await _discountService.DeleteDiscountAsync(id);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 
-    /// <summary>Calculates the discounted price for a product given its original price.</summary>
     [HttpGet("product/{productId:int}/price")]
     [AllowAnonymous]
     public async Task<IActionResult> CalculatePrice(int productId, int categoryId, decimal price)

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
@@ -17,17 +18,9 @@ public class AdminReviewController : ControllerBase
     }
 
     [HttpGet("all")]
-    public async Task<IActionResult> GetAllReviews(
-        int pageIndex = 1,
-        int pageSize = 10,
-        string? filterOn = null,
-        string? filterQuery = null,
-        bool? isApproved = null,
-        string? sortBy = null,
-        bool isAscending = true)
+    public async Task<IActionResult> GetAllReviews([FromQuery] ReviewQueryParams queryParams)
     {
-        var reviews = await _reviewService.GetAllReviewsAsync(
-            pageIndex, pageSize, filterOn, filterQuery, isApproved, sortBy, isAscending);
+        var reviews = await _reviewService.GetAllReviewsAsync(queryParams);
 
         return Ok(reviews);
     }

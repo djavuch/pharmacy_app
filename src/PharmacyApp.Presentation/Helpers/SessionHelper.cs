@@ -48,8 +48,8 @@ public static class SessionHelper
         {
             HttpOnly = true,
             IsEssential = true,
-            SameSite = SameSiteMode.None,
-            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Secure = false,
             Path = "/",
             MaxAge = CartLifeTime
         };

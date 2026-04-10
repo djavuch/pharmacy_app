@@ -180,7 +180,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusAccountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusAccount", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -210,7 +210,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("BonusAccounts");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusSettingsModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusSettings", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -256,7 +256,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusTransactionModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusTransaction", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -294,7 +294,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("BonusTransactions");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.CartItemModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.CartItem", b =>
                 {
                     b.Property<int>("CartId")
                         .HasColumnType("integer");
@@ -319,7 +319,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("CartItems");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.CategoryModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Category", b =>
                 {
                     b.Property<int>("CategoryId")
                         .ValueGeneratedOnAdd()
@@ -434,7 +434,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.CategoryDiscountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.CategoryDiscount", b =>
                 {
                     b.Property<int>("CategoryId")
                         .HasColumnType("integer");
@@ -449,7 +449,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("CategoryDiscounts");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.DiscountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.Discount", b =>
                 {
                     b.Property<Guid>("DiscountId")
                         .ValueGeneratedOnAdd()
@@ -504,7 +504,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("Discounts");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.ProductDiscountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.ProductDiscount", b =>
                 {
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
@@ -519,83 +519,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("ProductDiscounts");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderAddressModel", b =>
-                {
-                    b.Property<int>("AddressId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AddressId"));
-
-                    b.Property<string>("AdditionalInfo")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("ApartmentNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Country")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("State")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Street")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ZipCode")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.HasKey("AddressId");
-
-                    b.ToTable("OrderAddresses");
-                });
-
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderItemModel", b =>
-                {
-                    b.Property<int>("OrderId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid?>("AppliedDiscountId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("DiscountAmount")
-                        .HasColumnType("numeric");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("numeric");
-
-                    b.Property<string>("ProductName")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.HasKey("OrderId", "ProductId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("OrderItems");
-                });
-
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Order", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -658,7 +582,83 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ProductModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderAddress", b =>
+                {
+                    b.Property<int>("AddressId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("AddressId"));
+
+                    b.Property<string>("AdditionalInfo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ApartmentNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ZipCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("AddressId");
+
+                    b.ToTable("OrderAddresses");
+                });
+
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderItem", b =>
+                {
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("AppliedDiscountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("DiscountAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("ProductName")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("OrderId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Product", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -989,23 +989,538 @@ namespace PharmacyApp.Infrastructure.Migrations
                             Price = 14.99m,
                             StockQuantity = 220,
                             WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 27,
+                            CategoryId = 5,
+                            Description = "Reduces wrinkles and fine lines. Contains retinol and hyaluronic acid.",
+                            ImageUrl = "https://via.placeholder.com/400/f9ca24/000000?text=Serum",
+                            Name = "Anti-Aging Serum",
+                            Price = 39.99m,
+                            StockQuantity = 90,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 28,
+                            CategoryId = 5,
+                            Description = "Soothes and relieves dry, itchy eczema-prone skin. Fragrance-free.",
+                            ImageUrl = "https://via.placeholder.com/400/6ab04c/FFFFFF?text=Eczema+Cream",
+                            Name = "Eczema Relief Cream",
+                            Price = 22.99m,
+                            StockQuantity = 120,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 29,
+                            CategoryId = 6,
+                            Description = "Fast relief from heartburn and acid indigestion. Chewable formula.",
+                            ImageUrl = "https://via.placeholder.com/400/6c5ce7/FFFFFF?text=Antacid",
+                            Name = "Antacid Tablets",
+                            Price = 9.99m,
+                            StockQuantity = 280,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 30,
+                            CategoryId = 6,
+                            Description = "Supports digestion of proteins, fats and carbohydrates. Take with meals.",
+                            ImageUrl = "https://via.placeholder.com/400/00b894/FFFFFF?text=Enzymes",
+                            Name = "Digestive Enzymes",
+                            Price = 27.99m,
+                            StockQuantity = 130,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 31,
+                            CategoryId = 6,
+                            Description = "Gentle overnight relief from occasional constipation.",
+                            ImageUrl = "https://via.placeholder.com/400/fdcb6e/000000?text=Laxative",
+                            Name = "Laxative Tablets",
+                            Price = 8.49m,
+                            StockQuantity = 200,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 32,
+                            CategoryId = 6,
+                            Description = "Controls symptoms of diarrhea quickly and effectively.",
+                            ImageUrl = "https://via.placeholder.com/400/e17055/FFFFFF?text=Anti-Diarrheal",
+                            Name = "Anti-Diarrheal Capsules",
+                            Price = 11.49m,
+                            StockQuantity = 170,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 33,
+                            CategoryId = 6,
+                            Description = "Daily fiber intake support. Improves gut motility and stool regularity.",
+                            ImageUrl = "https://via.placeholder.com/400/55efc4/000000?text=Fiber",
+                            Name = "Fiber Supplement 300g",
+                            Price = 18.99m,
+                            StockQuantity = 150,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 34,
+                            CategoryId = 7,
+                            Description = "Essential vitamin D for infants. 400 IU per drop. Unflavored.",
+                            ImageUrl = "https://via.placeholder.com/400/fdcb6e/000000?text=Baby+Vit+D",
+                            Name = "Baby Vitamin D Drops",
+                            Price = 14.99m,
+                            StockQuantity = 160,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 35,
+                            CategoryId = 7,
+                            Description = "Paracetamol suspension for infants. Strawberry flavour. 100ml.",
+                            ImageUrl = "https://via.placeholder.com/400/fd79a8/FFFFFF?text=Baby+Fever",
+                            Name = "Infant Fever Reducer",
+                            Price = 9.99m,
+                            StockQuantity = 220,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 36,
+                            CategoryId = 7,
+                            Description = "Gentle nasal aspirator for newborns and infants. Easy to clean.",
+                            ImageUrl = "https://via.placeholder.com/400/74b9ff/FFFFFF?text=Aspirator",
+                            Name = "Baby Nasal Aspirator",
+                            Price = 12.99m,
+                            StockQuantity = 140,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 37,
+                            CategoryId = 7,
+                            Description = "Soothes and protects sensitive baby skin. Zinc oxide formula.",
+                            ImageUrl = "https://via.placeholder.com/400/a29bfe/FFFFFF?text=Diaper+Cream",
+                            Name = "Diaper Rash Cream",
+                            Price = 8.99m,
+                            StockQuantity = 260,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 38,
+                            CategoryId = 7,
+                            Description = "Supports healthy gut microbiome in infants. No artificial additives.",
+                            ImageUrl = "https://via.placeholder.com/400/00cec9/FFFFFF?text=Baby+Probiotic",
+                            Name = "Baby Probiotics Drops",
+                            Price = 21.99m,
+                            StockQuantity = 100,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 39,
+                            CategoryId = 8,
+                            Description = "Upper arm blood pressure monitor with memory for 60 readings. WHO indicator.",
+                            ImageUrl = "https://via.placeholder.com/400/2d3436/FFFFFF?text=BP+Monitor",
+                            Name = "Digital Blood Pressure Monitor",
+                            Price = 49.99m,
+                            StockQuantity = 70,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 40,
+                            CategoryId = 8,
+                            Description = "Fast 10-second reading. Fever alert. Suitable for all ages.",
+                            ImageUrl = "https://via.placeholder.com/400/636e72/FFFFFF?text=Thermometer",
+                            Name = "Digital Thermometer",
+                            Price = 12.99m,
+                            StockQuantity = 200,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 41,
+                            CategoryId = 8,
+                            Description = "Measures blood oxygen saturation and pulse rate. Portable design.",
+                            ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Oximeter",
+                            Name = "Pulse Oximeter",
+                            Price = 29.99m,
+                            StockQuantity = 90,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 42,
+                            CategoryId = 8,
+                            Description = "Converts liquid medication into fine mist for inhalation. Quiet operation.",
+                            ImageUrl = "https://via.placeholder.com/400/dfe6e9/000000?text=Nebulizer",
+                            Name = "Nebulizer Machine",
+                            Price = 59.99m,
+                            StockQuantity = 50,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 43,
+                            CategoryId = 8,
+                            Description = "Compact wrist monitor with irregular heartbeat detection.",
+                            ImageUrl = "https://via.placeholder.com/400/0984e3/FFFFFF?text=Wrist+BP",
+                            Name = "Wrist Blood Pressure Monitor",
+                            Price = 39.99m,
+                            StockQuantity = 80,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 44,
+                            CategoryId = 9,
+                            Description = "Instant relief for dry and irritated eyes. Preservative-free.",
+                            ImageUrl = "https://via.placeholder.com/400/0652DD/FFFFFF?text=Eye+Drops",
+                            Name = "Lubricating Eye Drops",
+                            Price = 10.99m,
+                            StockQuantity = 240,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 45,
+                            CategoryId = 9,
+                            Description = "Relieves redness and itching due to allergies. Fast acting.",
+                            ImageUrl = "https://via.placeholder.com/400/1289A7/FFFFFF?text=Allergy+Drops",
+                            Name = "Antihistamine Eye Drops",
+                            Price = 13.99m,
+                            StockQuantity = 180,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 46,
+                            CategoryId = 9,
+                            Description = "All-in-one solution for cleaning, rinsing and storing contact lenses.",
+                            ImageUrl = "https://via.placeholder.com/400/C4E538/000000?text=Lens+Solution",
+                            Name = "Contact Lens Solution 360ml",
+                            Price = 11.99m,
+                            StockQuantity = 200,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 47,
+                            CategoryId = 9,
+                            Description = "Lutein and zeaxanthin formula to support macular health and vision.",
+                            ImageUrl = "https://via.placeholder.com/400/FDA7DF/000000?text=Eye+Vitamins",
+                            Name = "Eye Vitamins Complex",
+                            Price = 24.99m,
+                            StockQuantity = 130,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 48,
+                            CategoryId = 10,
+                            Description = "Advanced whitening formula with fluoride. Removes surface stains.",
+                            ImageUrl = "https://via.placeholder.com/400/ffffff/000000?text=Toothpaste",
+                            Name = "Whitening Toothpaste",
+                            Price = 7.99m,
+                            StockQuantity = 350,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 49,
+                            CategoryId = 10,
+                            Description = "Kills 99.9% of bacteria. Freshens breath for 12 hours.",
+                            ImageUrl = "https://via.placeholder.com/400/00b894/FFFFFF?text=Mouthwash",
+                            Name = "Antibacterial Mouthwash 500ml",
+                            Price = 9.99m,
+                            StockQuantity = 280,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 50,
+                            CategoryId = 10,
+                            Description = "Waxed dental floss for easy gliding between teeth. Mint flavored.",
+                            ImageUrl = "https://via.placeholder.com/400/55efc4/000000?text=Dental+Floss",
+                            Name = "Dental Floss 50m",
+                            Price = 4.99m,
+                            StockQuantity = 400,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 51,
+                            CategoryId = 10,
+                            Description = "Relieves tooth sensitivity in 2 weeks. Enamel protection formula.",
+                            ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Sensitive+TP",
+                            Name = "Sensitive Toothpaste",
+                            Price = 8.99m,
+                            StockQuantity = 300,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 52,
+                            CategoryId = 10,
+                            Description = "Compatible replacement heads with round bristle technology.",
+                            ImageUrl = "https://via.placeholder.com/400/74b9ff/FFFFFF?text=Brush+Heads",
+                            Name = "Electric Toothbrush Heads 4pk",
+                            Price = 19.99m,
+                            StockQuantity = 160,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 53,
+                            CategoryId = 11,
+                            Description = "48-hour protection against sweat and odor. Alcohol-free formula.",
+                            ImageUrl = "https://via.placeholder.com/400/a29bfe/FFFFFF?text=Deodorant",
+                            Name = "Antiperspirant Deodorant",
+                            Price = 6.99m,
+                            StockQuantity = 320,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 54,
+                            CategoryId = 11,
+                            Description = "Controls dandruff and seborrheic dermatitis. Contains ketoconazole.",
+                            ImageUrl = "https://via.placeholder.com/400/6c5ce7/FFFFFF?text=Shampoo",
+                            Name = "Medicated Shampoo",
+                            Price = 14.99m,
+                            StockQuantity = 180,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 55,
+                            CategoryId = 11,
+                            Description = "70% alcohol gel. Kills 99.99% of germs without water.",
+                            ImageUrl = "https://via.placeholder.com/400/00cec9/FFFFFF?text=Hand+Sanitizer",
+                            Name = "Hand Sanitizer 250ml",
+                            Price = 5.99m,
+                            StockQuantity = 400,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 56,
+                            CategoryId = 11,
+                            Description = "Intensive moisturizing cream for cracked heels and dry feet.",
+                            ImageUrl = "https://via.placeholder.com/400/fd79a8/FFFFFF?text=Foot+Cream",
+                            Name = "Foot Cream with Urea",
+                            Price = 11.99m,
+                            StockQuantity = 150,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 57,
+                            CategoryId = 12,
+                            Description = "Complete prenatal formula with folic acid, iron and DHA for mother and baby.",
+                            ImageUrl = "https://via.placeholder.com/400/fd79a8/FFFFFF?text=Prenatal",
+                            Name = "Prenatal Vitamins",
+                            Price = 29.99m,
+                            StockQuantity = 140,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 58,
+                            CategoryId = 12,
+                            Description = "Supports hormonal balance and relieves PMS symptoms.",
+                            ImageUrl = "https://via.placeholder.com/400/e84393/FFFFFF?text=Primrose+Oil",
+                            Name = "Evening Primrose Oil 1000mg",
+                            Price = 22.99m,
+                            StockQuantity = 120,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 59,
+                            CategoryId = 12,
+                            Description = "Supports urinary tract health. High potency 36mg PAC per capsule.",
+                            ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=Cranberry",
+                            Name = "Cranberry Extract Capsules",
+                            Price = 18.99m,
+                            StockQuantity = 160,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 60,
+                            CategoryId = 12,
+                            Description = "Contains black cohosh and soy isoflavones to ease menopause symptoms.",
+                            ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Menopause",
+                            Name = "Menopause Support Formula",
+                            Price = 34.99m,
+                            StockQuantity = 90,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 61,
+                            CategoryId = 13,
+                            Description = "Complete daily multivitamin formulated for men's specific nutritional needs.",
+                            ImageUrl = "https://via.placeholder.com/400/0984e3/FFFFFF?text=Men+Multi",
+                            Name = "Men's Multivitamin",
+                            Price = 26.99m,
+                            StockQuantity = 150,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 62,
+                            CategoryId = 13,
+                            Description = "Supports prostate health and healthy urinary flow in men.",
+                            ImageUrl = "https://via.placeholder.com/400/2d3436/FFFFFF?text=Saw+Palmetto",
+                            Name = "Saw Palmetto 320mg",
+                            Price = 21.99m,
+                            StockQuantity = 130,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 63,
+                            CategoryId = 13,
+                            Description = "Natural formula with zinc, vitamin D and ashwagandha to support healthy testosterone levels.",
+                            ImageUrl = "https://via.placeholder.com/400/636e72/FFFFFF?text=Testo+Support",
+                            Name = "Testosterone Support Complex",
+                            Price = 38.99m,
+                            StockQuantity = 100,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 64,
+                            CategoryId = 13,
+                            Description = "Improves muscle strength and exercise performance. Unflavored powder.",
+                            ImageUrl = "https://via.placeholder.com/400/00b894/FFFFFF?text=Creatine",
+                            Name = "Creatine Monohydrate 250g",
+                            Price = 24.99m,
+                            StockQuantity = 170,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 65,
+                            CategoryId = 14,
+                            Description = "Compatible with most glucose meters. Accurate results in 5 seconds.",
+                            ImageUrl = "https://via.placeholder.com/400/fdcb6e/000000?text=Test+Strips",
+                            Name = "Blood Glucose Test Strips 50pk",
+                            Price = 22.99m,
+                            StockQuantity = 200,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 66,
+                            CategoryId = 14,
+                            Description = "Accurate blood glucose monitoring. Large display. Memory for 500 readings.",
+                            ImageUrl = "https://via.placeholder.com/400/e17055/FFFFFF?text=Glucose+Meter",
+                            Name = "Digital Glucose Meter",
+                            Price = 34.99m,
+                            StockQuantity = 80,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 67,
+                            CategoryId = 14,
+                            Description = "Ultra-thin 30G lancets for nearly painless blood sampling.",
+                            ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=Lancets",
+                            Name = "Lancets 100pk",
+                            Price = 9.99m,
+                            StockQuantity = 300,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 68,
+                            CategoryId = 14,
+                            Description = "Intensive moisturizer for diabetic dry skin. Improves circulation.",
+                            ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Diabetic+Cream",
+                            Name = "Diabetic Foot Cream",
+                            Price = 15.99m,
+                            StockQuantity = 140,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 69,
+                            CategoryId = 14,
+                            Description = "Antioxidant support for nerve health in diabetics. Reduces oxidative stress.",
+                            ImageUrl = "https://via.placeholder.com/400/6c5ce7/FFFFFF?text=Alpha+Lipoic",
+                            Name = "Alpha Lipoic Acid 600mg",
+                            Price = 27.99m,
+                            StockQuantity = 110,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 70,
+                            CategoryId = 15,
+                            Description = "Supports heart muscle energy production. Antioxidant protection for cells.",
+                            ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=CoQ10",
+                            Name = "CoQ10 200mg",
+                            Price = 36.99m,
+                            StockQuantity = 120,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 71,
+                            CategoryId = 15,
+                            Description = "Supports healthy heart rhythm and blood pressure. High absorption form.",
+                            ImageUrl = "https://via.placeholder.com/400/e17055/FFFFFF?text=Magnesium",
+                            Name = "Magnesium Glycinate 400mg",
+                            Price = 23.99m,
+                            StockQuantity = 150,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 72,
+                            CategoryId = 15,
+                            Description = "Naturally supports healthy cholesterol levels. Standardized extract.",
+                            ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=Red+Yeast+Rice",
+                            Name = "Red Yeast Rice Extract",
+                            Price = 29.99m,
+                            StockQuantity = 100,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 73,
+                            CategoryId = 15,
+                            Description = "Traditional herbal support for cardiovascular function and circulation.",
+                            ImageUrl = "https://via.placeholder.com/400/e84393/FFFFFF?text=Hawthorn",
+                            Name = "Hawthorn Berry 600mg",
+                            Price = 18.99m,
+                            StockQuantity = 130,
+                            WishlistCount = 0
+                        },
+                        new
+                        {
+                            Id = 74,
+                            CategoryId = 15,
+                            Description = "High-potency fish oil with 900mg EPA+DHA per capsule. Supports heart health.",
+                            ImageUrl = "https://via.placeholder.com/400/0984e3/FFFFFF?text=Omega-3+TS",
+                            Name = "Omega-3 Triple Strength",
+                            Price = 39.99m,
+                            StockQuantity = 110,
+                            WishlistCount = 0
                         });
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeCategoryModel", b =>
-                {
-                    b.Property<Guid>("PromoCodeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("PromoCodeId", "CategoryId");
-
-                    b.ToTable("PromoCodeCategories");
-                });
-
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCode", b =>
                 {
                     b.Property<Guid>("PromoCodeId")
                         .ValueGeneratedOnAdd()
@@ -1066,7 +1581,20 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("PromoCodes");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeProductModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeCategory", b =>
+                {
+                    b.Property<Guid>("PromoCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("PromoCodeId", "CategoryId");
+
+                    b.ToTable("PromoCodeCategories");
+                });
+
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeProduct", b =>
                 {
                     b.Property<Guid>("PromoCodeId")
                         .HasColumnType("uuid");
@@ -1079,7 +1607,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("PromoCodeProducts");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeUsageModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeUsage", b =>
                 {
                     b.Property<Guid>("UsageId")
                         .ValueGeneratedOnAdd()
@@ -1111,7 +1639,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("PromoCodeUsages");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.RefreshTokenModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1146,7 +1674,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ReviewModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Review", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1155,6 +1683,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Content")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1170,6 +1699,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
@@ -1181,7 +1711,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("Reviews");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ShoppingCartModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.ShoppingCart", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1219,7 +1749,94 @@ namespace PharmacyApp.Infrastructure.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.UserAddressModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.User", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DateOfBirth")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsPasswordReset")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex");
+
+                    b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.UserAddress", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -1285,96 +1902,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.ToTable("UserAddresses");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.UserModel", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("text");
-
-                    b.Property<int>("AccessFailedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsPasswordReset")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("NormalizedEmail")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("NormalizedUserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("SecurityStamp")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserName")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedEmail")
-                        .HasDatabaseName("EmailIndex");
-
-                    b.HasIndex("NormalizedUserName")
-                        .IsUnique()
-                        .HasDatabaseName("UserNameIndex");
-
-                    b.ToTable("AspNetUsers", (string)null);
-                });
-
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.WishlistModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Wishlist", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("text");
@@ -1403,7 +1931,7 @@ namespace PharmacyApp.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", null)
+                    b.HasOne("PharmacyApp.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1412,7 +1940,7 @@ namespace PharmacyApp.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", null)
+                    b.HasOne("PharmacyApp.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1427,7 +1955,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", null)
+                    b.HasOne("PharmacyApp.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1436,27 +1964,27 @@ namespace PharmacyApp.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", null)
+                    b.HasOne("PharmacyApp.Domain.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusAccountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusAccount", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithOne("BonusAccount")
-                        .HasForeignKey("PharmacyApp.Domain.Entities.Bonus.BonusAccountModel", "UserId")
+                        .HasForeignKey("PharmacyApp.Domain.Entities.Bonus.BonusAccount", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusTransactionModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusTransaction", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.Bonus.BonusAccountModel", "BonusAccount")
+                    b.HasOne("PharmacyApp.Domain.Entities.Bonus.BonusAccount", "BonusAccount")
                         .WithMany("Transactions")
                         .HasForeignKey("BonusAccountId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1465,15 +1993,15 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("BonusAccount");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.CartItemModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.CartItem", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.ShoppingCartModel", "ShoppingCart")
+                    b.HasOne("PharmacyApp.Domain.Entities.ShoppingCart", "ShoppingCart")
                         .WithMany("Items")
                         .HasForeignKey("CartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.ProductModel", "Product")
+                    b.HasOne("PharmacyApp.Domain.Entities.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1484,15 +2012,15 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("ShoppingCart");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.CategoryDiscountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.CategoryDiscount", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.CategoryModel", "Category")
+                    b.HasOne("PharmacyApp.Domain.Entities.Category", "Category")
                         .WithMany("CategoryDiscounts")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.Discount.DiscountModel", "Discount")
+                    b.HasOne("PharmacyApp.Domain.Entities.Discount.Discount", "Discount")
                         .WithMany("CategoryDiscounts")
                         .HasForeignKey("DiscountId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1503,15 +2031,15 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("Discount");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.ProductDiscountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.ProductDiscount", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.Discount.DiscountModel", "Discount")
+                    b.HasOne("PharmacyApp.Domain.Entities.Discount.Discount", "Discount")
                         .WithMany("ProductDiscounts")
                         .HasForeignKey("DiscountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.ProductModel", "Product")
+                    b.HasOne("PharmacyApp.Domain.Entities.Product", "Product")
                         .WithMany("ProductDiscounts")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1522,34 +2050,15 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderItemModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Order", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.OrderModel", "Order")
-                        .WithMany("OrderItems")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PharmacyApp.Domain.Entities.ProductModel", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Order");
-
-                    b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderModel", b =>
-                {
-                    b.HasOne("PharmacyApp.Domain.Entities.OrderAddressModel", "ShippingAddress")
+                    b.HasOne("PharmacyApp.Domain.Entities.OrderAddress", "ShippingAddress")
                         .WithMany()
                         .HasForeignKey("ShippingAddressId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithMany("Orders")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1560,9 +2069,28 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ProductModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderItem", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.CategoryModel", "Category")
+                    b.HasOne("PharmacyApp.Domain.Entities.Order", "Order")
+                        .WithMany("OrderItems")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PharmacyApp.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Order");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Product", b =>
+                {
+                    b.HasOne("PharmacyApp.Domain.Entities.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1571,9 +2099,9 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeCategoryModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeCategory", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.PromoCode.PromoCodeModel", "PromoCode")
+                    b.HasOne("PharmacyApp.Domain.Entities.PromoCode.PromoCode", "PromoCode")
                         .WithMany("PromoCodeCategories")
                         .HasForeignKey("PromoCodeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1582,9 +2110,9 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("PromoCode");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeProductModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeProduct", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.PromoCode.PromoCodeModel", "PromoCode")
+                    b.HasOne("PharmacyApp.Domain.Entities.PromoCode.PromoCode", "PromoCode")
                         .WithMany("PromoCodeProducts")
                         .HasForeignKey("PromoCodeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1593,9 +2121,9 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("PromoCode");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeUsageModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeUsage", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.PromoCode.PromoCodeModel", "PromoCode")
+                    b.HasOne("PharmacyApp.Domain.Entities.PromoCode.PromoCode", "PromoCode")
                         .WithMany("UsageHistory")
                         .HasForeignKey("PromoCodeId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1604,9 +2132,9 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("PromoCode");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.RefreshTokenModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.RefreshToken", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1615,27 +2143,28 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ReviewModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Review", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.ProductModel", "Product")
+                    b.HasOne("PharmacyApp.Domain.Entities.Product", "Product")
                         .WithMany("Reviews")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithMany("Reviews")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Product");
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ShoppingCartModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.ShoppingCart", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -1643,9 +2172,9 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.UserAddressModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.UserAddress", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithMany("Addresses")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1654,15 +2183,15 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.WishlistModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Wishlist", b =>
                 {
-                    b.HasOne("PharmacyApp.Domain.Entities.ProductModel", "Product")
+                    b.HasOne("PharmacyApp.Domain.Entities.Product", "Product")
                         .WithMany("Wishlist")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PharmacyApp.Domain.Entities.UserModel", "User")
+                    b.HasOne("PharmacyApp.Domain.Entities.User", "User")
                         .WithMany("Wishlist")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1673,31 +2202,31 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusAccountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Bonus.BonusAccount", b =>
                 {
                     b.Navigation("Transactions");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.CategoryModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Category", b =>
                 {
                     b.Navigation("CategoryDiscounts");
 
                     b.Navigation("Products");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.DiscountModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.Discount", b =>
                 {
                     b.Navigation("CategoryDiscounts");
 
                     b.Navigation("ProductDiscounts");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.OrderModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderItems");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ProductModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.Product", b =>
                 {
                     b.Navigation("ProductDiscounts");
 
@@ -1706,7 +2235,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("Wishlist");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCodeModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.PromoCode.PromoCode", b =>
                 {
                     b.Navigation("PromoCodeCategories");
 
@@ -1715,12 +2244,12 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Navigation("UsageHistory");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.ShoppingCartModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.ShoppingCart", b =>
                 {
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("PharmacyApp.Domain.Entities.UserModel", b =>
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.User", b =>
                 {
                     b.Navigation("Addresses");
 

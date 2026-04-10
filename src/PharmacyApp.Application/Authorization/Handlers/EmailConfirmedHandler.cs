@@ -8,9 +8,9 @@ namespace PharmacyApp.Application.Authorization.Handlers;
 
 public class EmailConfirmedHandler : AuthorizationHandler<EmailConfirmedRequirement>
 {
-    private readonly UserManager<UserModel> _userManager;
+    private readonly UserManager<User> _userManager;
 
-    public EmailConfirmedHandler(UserManager<UserModel> userManager)
+    public EmailConfirmedHandler(UserManager<User> userManager)
     {
         _userManager = userManager;
     }

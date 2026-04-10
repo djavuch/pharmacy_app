@@ -4,100 +4,85 @@ namespace PharmacyApp.Infrastructure.Seeds;
 
 public static class CategorySeedsConfiguration
 {
-    public static IEnumerable<CategoryModel> GetSeedData()
+    public static IEnumerable<object> GetSeedData()
     {
-        return new List<CategoryModel>
+        return new List<object>
         {
-            new()
+            new
             {
-                CategoryId = 1,
-                CategoryName = "Vitamins & Supplements",
+                CategoryId = 1, CategoryName = "Vitamins & Supplements",
                 CategoryDescription = "Essential vitamins and dietary supplements for your health"
             },
-            new()
+            new
             {
-                CategoryId = 2,
-                CategoryName = "Pain Relief",
+                CategoryId = 2, CategoryName = "Pain Relief",
                 CategoryDescription = "Over-the-counter pain medications and relief products"
             },
-            new()
+            new
             {
-                CategoryId = 3,
-                CategoryName = "Cold & Flu",
+                CategoryId = 3, CategoryName = "Cold & Flu",
                 CategoryDescription = "Medications and remedies for cold and flu symptoms"
             },
-            new()
+            new
             {
-                CategoryId = 4,
-                CategoryName = "First Aid",
+                CategoryId = 4, CategoryName = "First Aid",
                 CategoryDescription = "First aid supplies and emergency medical equipment"
             },
-            new()
+            new
             {
-                CategoryId = 5,
-                CategoryName = "Skincare",
+                CategoryId = 5, CategoryName = "Skincare",
                 CategoryDescription = "Dermatological products and skin treatment solutions"
             },
-            new()
+            new
             {
-                CategoryId = 6,
-                CategoryName = "Digestive Health",
+                CategoryId = 6, CategoryName = "Digestive Health",
                 CategoryDescription = "Products for digestive system support and health"
             },
-            new()
+            new
             {
-                CategoryId = 7,
-                CategoryName = "Baby Care",
+                CategoryId = 7, CategoryName = "Baby Care",
                 CategoryDescription = "Healthcare products for infants and toddlers"
             },
-            new()
+            new
             {
-                CategoryId = 8,
-                CategoryName = "Medical Devices",
+                CategoryId = 8, CategoryName = "Medical Devices",
                 CategoryDescription = "Blood pressure monitors, thermometers, and other medical devices"
             },
-            new()
+            new
             {
-                CategoryId = 9,
-                CategoryName = "Eye Care",
+                CategoryId = 9, CategoryName = "Eye Care",
                 CategoryDescription = "Eye drops, contact lens solutions, and vision care products"
             },
-            new()
+            new
             {
-                CategoryId = 10,
-                CategoryName = "Oral Care",
+                CategoryId = 10, CategoryName = "Oral Care",
                 CategoryDescription = "Dental hygiene and oral health products"
             },
-            new()
+            new
             {
-                CategoryId = 11,
-                CategoryName = "Personal Care",
+                CategoryId = 11, CategoryName = "Personal Care",
                 CategoryDescription = "Personal hygiene and grooming products"
             },
-            new()
+            new
             {
-                CategoryId = 12,
-                CategoryName = "Women's Health",
+                CategoryId = 12, CategoryName = "Women's Health",
                 CategoryDescription = "Health products specifically for women"
             },
-            new()
+            new
             {
-                CategoryId = 13,
-                CategoryName = "Men's Health",
+                CategoryId = 13, CategoryName = "Men's Health",
                 CategoryDescription = "Health products specifically for men"
             },
-            new()
+            new
             {
-                CategoryId = 14,
-                CategoryName = "Diabetes Care",
+                CategoryId = 14, CategoryName = "Diabetes Care",
                 CategoryDescription = "Products for diabetes management and monitoring"
             },
-            new()
+            new
             {
-                CategoryId = 15,
-                CategoryName = "Heart Health",
+                CategoryId = 15, CategoryName = "Heart Health",
                 CategoryDescription = "Cardiovascular health support products"
-            }
+            },
         };
     }
 }

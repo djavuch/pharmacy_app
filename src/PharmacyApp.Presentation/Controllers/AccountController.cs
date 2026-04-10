@@ -1,14 +1,11 @@
-﻿using FluentValidation;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using PharmacyApp.Application.DTOs.User.AccountDto;
-using PharmacyApp.Application.DTOs.User.Enums;
 using PharmacyApp.Application.Interfaces.Services;
-using PharmacyApp.Application.Services;
 using PharmacyApp.Presentation.Helpers;
 using System.Security.Claims;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
+using PharmacyApp.Application.Contracts.User.Account;
+using PharmacyApp.Application.Contracts.User.Results;
+
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
@@ -28,16 +25,23 @@ public class AccountController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserRegistrationDto userRegistrationDto)
     {
+        if (!Request.Host.HasValue)
+            return BadRequest(new { message = "Request host is required" });
+        
         var result = await _userService.UserRegisterAsync(userRegistrationDto, Request.Scheme, Request.Host.Value);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
 
         var sessionId = SessionHelper.TryGetSessionId(HttpContext);
-        if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(result.Id))
+        
+        if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(result.Value!.Id))
         {
-            await _shoppingCartService.MergeCartsOnLoginAsync(sessionId, result.Id);
+            await _shoppingCartService.MergeCartsOnLoginAsync(sessionId, result.Value.Id);
             SessionHelper.ClearSessionId(HttpContext);         
         }
 
-        return Ok(result); 
+        return Ok(result.Value); 
     }
 
     [HttpPost("login")]
@@ -87,10 +91,8 @@ public class AccountController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(RefreshTokenRequestDto request)
     {
-        if (string.IsNullOrEmpty(request?.RefreshToken))
-        {
-            throw new BadRequestException("Refresh token is required for logout.");
-        }
+        if (string.IsNullOrEmpty(request.RefreshToken))
+            return BadRequest(new { message = "Refresh token is required for logout." });
         
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         
@@ -111,8 +113,8 @@ public class AccountController : ControllerBase
     {
         var result = await _userService.ConfirmEmailAsync(userId, token);
 
-        if (!result)
-            throw new BadRequestException($"Email confirmation failed.");
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
 
         return Ok(new { message = "Email confirmed successfully." });
     }
@@ -120,16 +122,25 @@ public class AccountController : ControllerBase
     [HttpPost("resend-confirmation")]
     public async Task<IActionResult> ResendConfirmationEmail([FromQuery] string email)
     {
-        await _userService.ResendConfirmationEmailAsync(email, Request.Scheme, Request.Host.Value);
+        if (!Request.Host.HasValue)
+            return BadRequest(new { message = "Request host is required" });
+        
+        var result = await _userService.ResendConfirmationEmailAsync(email, Request.Scheme, Request.Host.Value);
 
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return Ok(new { message = "If an account with that email exists, a confirmation link has been sent." });
     }
 
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
     {
-        await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, Request.Scheme, Request.Host.Value);
-        return Ok(new { message = "If an account with that email exists, a password reset link has been sent." });
+        if (!Request.Host.HasValue)
+            return BadRequest(new { message = "Request host is required" });
+        
+        var result = await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, Request.Scheme, Request.Host.Value);
+        return Ok(new { message = result.Message });
     }
 
     [HttpPost("reset-password")]
@@ -138,7 +149,7 @@ public class AccountController : ControllerBase
         var result = await _userService.ResetPasswordAsync(resetPasswordDto);
 
         if (!result.Succeeded)
-            throw new BadRequestException("Password reset failed.");
+            return BadRequest(new { message = "Password reset failed." });
 
         return Ok(new { message = "Password has been reset successfully." });
     }
@@ -148,10 +159,8 @@ public class AccountController : ControllerBase
     {
         var result = await _userService.RefreshTokenAsync(request.RefreshToken);
 
-        if (!result.Succeeded || result.Token is null || result.RefreshToken is null)
-        {
-            throw new UnauthorizedException("Token refresh failed.");
-        }
+        if (!result.Succeeded || result.Token is null)
+            return Unauthorized(new { message = "Token refresh failed." });
 
         return Ok(new
         {
@@ -168,14 +177,15 @@ public class AccountController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
-        {
-            throw new UnauthorizedException("User is not authenticated.");
-        }
+            return Unauthorized(new { message = "User is not authenticated." });
 
         changePasswordDto.UserId = userId;
-        
-        await _userService.ChangePasswordAsync(changePasswordDto);
 
+        var result = await _userService.ChangePasswordAsync(changePasswordDto);
+        
+        if (!result.Succeeded)
+            return BadRequest(new { message = "Failed to change password." });
+        
         return Ok(new { message = "Password changed successfully." });
     }
 }

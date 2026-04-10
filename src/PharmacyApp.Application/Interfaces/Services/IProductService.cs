@@ -1,15 +1,15 @@
-﻿using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.Product;
+﻿using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.Product;
+using PharmacyApp.Domain.Common;
 
 namespace PharmacyApp.Application.Interfaces.Services;
 public  interface IProductService
 {
-    Task<PaginatedList<ProductDto>> GetAllProductsAsync(int pageIndex = 1, int pageSize = 10, string? filterOn = null, 
-        string filterQuery = null, string sortBy = null, bool isAscending = true);
-    Task<ProductDto?> GetProductByIdAsync(int id);
-    Task<ProductDto?> AddProductAsync(CreateProductDto createProductDto);
-    Task UpdateProductAsync(UpdateProductDto updateProductDto);
-    Task DeleteProductAsync(int id);
-    Task UpdateStockAsync(int productId, int quantityChange);
+    Task<PaginatedList<ProductDto>> GetAllProductsAsync(QueryParams  query);
+    Task<Result<ProductDto>> GetProductByIdAsync(int id);
+    Task<Result<ProductDto>> AddProductAsync(CreateProductDto createProductDto);
+    Task<Result> UpdateProductAsync(UpdateProductDto updateProductDto);
+    Task<Result> DeleteProductAsync(int id);
+    Task<Result> UpdateStockAsync(int productId, int quantityChange);
 
 }

@@ -1,7 +1,7 @@
 ﻿using MailKit.Security;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using PharmacyApp.Application.DTOs.Email;
+using PharmacyApp.Application.Contracts.Notifications.Email;
 using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Infrastructure.Options;
 
@@ -33,7 +33,7 @@ public class EmailSenderService : IEmailSenderService
 
         using var smtp = new MailKit.Net.Smtp.SmtpClient();
 
-        await smtp.ConnectAsync(_emailOptions.SmtpServer, _emailOptions.SmtpPort, SecureSocketOptions.SslOnConnect);
+        await smtp.ConnectAsync(_emailOptions.SmtpServer, _emailOptions.SmtpPort, SecureSocketOptions.StartTls);
         await smtp.AuthenticateAsync(_emailOptions.SmtpUser, _emailOptions.SmtpPassword);
         await smtp.SendAsync(email);
         await smtp.DisconnectAsync(true);

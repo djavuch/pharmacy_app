@@ -12,13 +12,13 @@ public class RoleInitializationService : IRoleInitializationService
     private static readonly string[] RequiredRoles = ["Admin", "Pharmacist", "Manager", "Customer"];
 
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly UserManager<UserModel> _userManager;
+    private readonly UserManager<User> _userManager;
     private readonly IOptions<AdminBootstrapOptions> _options;
     private readonly ILogger<RoleInitializationService> _logger;
 
     public RoleInitializationService(
         RoleManager<IdentityRole> roleManager,
-        UserManager<UserModel> userManager,
+        UserManager<User> userManager,
         IOptions<AdminBootstrapOptions> options,
         ILogger<RoleInitializationService> logger)
     {
@@ -75,7 +75,7 @@ public class RoleInitializationService : IRoleInitializationService
 
         if (user is null)
         {
-            user = new UserModel
+            user = new User
             {
                 UserName = options.Email,
                 Email = options.Email,

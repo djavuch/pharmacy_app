@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshTokenModel>
+public class RefreshTokenConfiguration : IEntityTypeConfiguration<RefreshToken>
 {
-    public void Configure(EntityTypeBuilder<RefreshTokenModel> builder)
+    public void Configure(EntityTypeBuilder<RefreshToken> builder)
     {
         builder.HasKey(rt => rt.Id);
 

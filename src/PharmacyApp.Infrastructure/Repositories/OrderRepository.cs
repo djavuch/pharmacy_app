@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PharmacyApp.Application.DTOs.Order;
+using PharmacyApp.Application.Contracts.Order;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Domain.Entities;
 using PharmacyApp.Domain.Enums;
@@ -15,11 +15,11 @@ public class OrderRepository : IOrderRepository
         _dbContext = dbContext;
     }
 
-    public IQueryable<OrderListDto> GetAllAsync()
+    public IQueryable<OrderSummaryDto> GetAllAsync()
     {
         return _dbContext.Orders
             .AsNoTracking()
-            .Select(o => new OrderListDto
+            .Select(o => new OrderSummaryDto
             {
                 Id = o.Id,
                 OrderDate = o.OrderDate,
@@ -31,7 +31,7 @@ public class OrderRepository : IOrderRepository
             });
     }
 
-    public async Task<OrderModel?> GetAllByUserIdAsync(int userId)
+    public async Task<Order?> GetAllByUserIdAsync(int userId)
     {
         return await _dbContext.Orders
             .AsNoTracking()
@@ -39,7 +39,7 @@ public class OrderRepository : IOrderRepository
             .FirstOrDefaultAsync(o => o.UserId == userId.ToString());
     }
 
-    public async Task<OrderModel?> GetByIdAsync(int id)
+    public async Task<Order?> GetByIdAsync(int id)
     {
         return await _dbContext.Orders
             .Include(o => o.User)
@@ -48,25 +48,15 @@ public class OrderRepository : IOrderRepository
             .FirstOrDefaultAsync(o => o.Id == id);
     }
 
-    public async Task<OrderModel> AddAsync(OrderModel order)
+    public async Task<Order> AddAsync(Order order)
     {
         await _dbContext.Orders.AddAsync(order);
         return order;
     }
 
-    public Task UpdateAsync(OrderModel order)
+    public Task UpdateAsync(Order order)
     {
         _dbContext.Entry(order).State = EntityState.Modified;
         return Task.CompletedTask;
-    }
-
-    public async Task UpdateOrderStatusAsync(int orderId, int statusId)
-    {
-        var order = await GetByIdAsync(orderId);
-        if (order != null)
-        {
-            order.OrderStatus = (OrderStatus)statusId;
-            await UpdateAsync(order);
-        }
     }
 }

@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities.Bonus;
 
 namespace PharmacyApp.Infrastructure.Data.Configurations;
 
-public class BonusAccountConfiguration : IEntityTypeConfiguration<BonusAccountModel>
+public class BonusAccountConfiguration : IEntityTypeConfiguration<BonusAccount>
 {
-    public void Configure(EntityTypeBuilder<BonusAccountModel> builder)
+    public void Configure(EntityTypeBuilder<BonusAccount> builder)
     {
         builder.HasKey(b => b.Id);
 
@@ -18,7 +18,7 @@ public class BonusAccountConfiguration : IEntityTypeConfiguration<BonusAccountMo
 
         builder.HasOne(b => b.User)
             .WithOne(u => u.BonusAccount)
-            .HasForeignKey<BonusAccountModel>(b => b.UserId)
+            .HasForeignKey<BonusAccount>(b => b.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(b => b.Transactions)

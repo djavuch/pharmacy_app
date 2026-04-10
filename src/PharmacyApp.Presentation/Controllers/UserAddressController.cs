@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Address;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
+using PharmacyApp.Application.Contracts.Address;
 
 namespace PharmacyApp.Presentation.Controllers;
 
@@ -27,7 +27,7 @@ public class AddressController : ControllerBase
         return Ok(addresses);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetAddress(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -49,16 +49,24 @@ public class AddressController : ControllerBase
     public async Task<IActionResult> UpdateAddress(int id, SaveAddressDto dto)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var result = await _addressService.UpdateAddressAsync(id, dto, userId);
         
-        var address = await _addressService.UpdateAddressAsync(id, dto, userId);
-        return Ok(address);
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAddress(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        await _addressService.DeleteAddressAsync(id, userId);
+        
+        var result = await _addressService.DeleteAddressAsync(id, userId);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 
@@ -66,7 +74,11 @@ public class AddressController : ControllerBase
     public async Task<IActionResult> SetDefault(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)!;
-        await _addressService.SetDefaultAddressAsync(id, userId);
+        
+        var result = await _addressService.SetDefaultAddressAsync(id, userId); 
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 }

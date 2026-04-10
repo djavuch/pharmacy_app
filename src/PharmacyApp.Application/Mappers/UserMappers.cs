@@ -1,12 +1,13 @@
-﻿using PharmacyApp.Application.DTOs.Order;
-using PharmacyApp.Application.DTOs.User.UserProfileDto;
+﻿using PharmacyApp.Application.Contracts.Order;
+using PharmacyApp.Application.Contracts.User.Admin;
+using PharmacyApp.Application.Contracts.User.Profile;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static partial class UserMappers
 {
-    public static UserDto ToUserDto(this UserModel user) => new()
+    public static UserProfileDto ToUserDto(this User user) => new()
     {
         Id = user.Id,
         UserName = user.UserName ?? string.Empty,
@@ -16,14 +17,10 @@ public static partial class UserMappers
         Address = user.Address ?? string.Empty,
         DateOfBirth = user.DateOfBirth,
         PhoneNumber = user.PhoneNumber,
-        CreatedAt = user.CreatedAt,
-        IsLockedOut = user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow,
-        LockoutEnd = user.LockoutEnd,
-        AccessFailedCount = user.AccessFailedCount
+        CreatedAt = user.CreatedAt
     };
     
-    // Override mapper for admin
-    public static UserDto ToUserDto(this UserModel user, string? role) => new()
+    public static AdminUserDto ToAdminUserDto(this User user, string? role) => new()
     {
         Id = user.Id,
         UserName = user.UserName ?? string.Empty,
@@ -40,9 +37,9 @@ public static partial class UserMappers
         AccessFailedCount = user.AccessFailedCount
     };
 
-    public static UserOrdersDto ToUserOrdersDto(this OrderModel order)
+    public static UserOrderSummaryDto ToUserOrdersDto(this Order order)
     {
-        return new UserOrdersDto
+        return new UserOrderSummaryDto
         {
             OrderId = order.Id,
             OrderDate = order.OrderDate,
@@ -58,9 +55,9 @@ public static partial class UserMappers
         };
     }
 
-    public static UserReviewsDto ToUserReviewsDto(this ReviewModel review)
+    public static UserReviewSummaryDto ToUserReviewsDto(this Review review)
     {
-        return new UserReviewsDto
+        return new UserReviewSummaryDto
         {
             ReviewId = review.Id,
             ProductId = review.ProductId,

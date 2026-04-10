@@ -1,11 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.Discount;
+﻿using PharmacyApp.Application.Contracts.Discount;
 using PharmacyApp.Domain.Entities.Discount;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class DiscountMappers
 {
-    public static DiscountDto ToDiscountDto(this DiscountModel discount) => new()
+    public static DiscountDto ToDiscountDto(this Discount discount) => new()
     {
         DiscountId = discount.DiscountId,
         Name = discount.Name,

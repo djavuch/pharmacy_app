@@ -1,9 +1,9 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Order;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
+using PharmacyApp.Application.Contracts.Order;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Presentation.Controllers;
@@ -27,17 +27,19 @@ public class OrderController : ControllerBase
     );
 
     [Authorize]
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetOrder(int id)
     {
         var (userId, isStaff) = GetCallerInfo();
         if (string.IsNullOrWhiteSpace(userId))
-            throw new UnauthorizedException("User is not authenticated.");
+            return Unauthorized();
 
-        var order = await _orderService.GetOrderByIdAsync(id, userId, isStaff);
-        if (order is null) return NotFound();
-
-        return Ok(order);
+        var result = await _orderService.GetOrderByIdAsync(id, userId, isStaff);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
 
     [Authorize(Policy = "EmailConfirmed")]
@@ -47,21 +49,29 @@ public class OrderController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         
         if (string.IsNullOrWhiteSpace(userId))
-            throw new UnauthorizedException("Please sign in or create an account to place an order.");
+            return Unauthorized();
 
-        var order = await _orderService.CreateOrderAsync(createOrderDto, userId);
-        return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+        var result = await _orderService.CreateOrderAsync(createOrderDto, userId);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return CreatedAtAction(nameof(GetOrder), new { id = result.Value!.Id }, result.Value);
     }
 
     [Authorize(Policy = "EmailConfirmed")]
-    [HttpPost("cancel-order/{orderId}")]
+    [HttpPost("/orders/{orderId:int}/cancel")]
     public async Task<IActionResult> CancelOrder(int orderId)
     {
         var (userId, isStaff) = GetCallerInfo();
         if (string.IsNullOrWhiteSpace(userId))
-            throw new UnauthorizedException("User is not authenticated.");
+            return Unauthorized();
 
-        await _orderService.CancelOrderAsync(orderId, userId, isStaff);
+        var result = await _orderService.CancelOrderAsync(orderId, userId, isStaff);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 }

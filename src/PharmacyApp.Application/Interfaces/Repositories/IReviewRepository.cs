@@ -3,10 +3,10 @@
 namespace PharmacyApp.Application.Interfaces.Repositories;
 public interface IReviewRepository
 {
-    Task<ReviewModel?> GetByIdAsync(int id);
-    IQueryable<ReviewModel> GetByProductId(int productId);
-    Task AddAsync(ReviewModel review);
+    Task<Review?> GetByIdAsync(int id);
+    IQueryable<Review> GetByProductId(int productId);
+    Task AddAsync(Review review);
     // Admin specific
-    public IQueryable<ReviewModel> GetAll();
-    Task DeleteAsync(ReviewModel review);
+    public IQueryable<Review> GetAll();
+    Task DeleteAsync(Review review);
 }

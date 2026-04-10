@@ -1,12 +1,12 @@
-﻿using PharmacyApp.Application.DTOs.Admin.Bonus;
-using PharmacyApp.Application.DTOs.Bonus;
+﻿using PharmacyApp.Application.Contracts.Bonus;
+using PharmacyApp.Application.Contracts.Bonus.Admin;
 using PharmacyApp.Domain.Entities.Bonus;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class BonusMappers
 {
-    public static BonusAccountDto ToBonusAccountDto(this BonusAccountModel account) => new()
+    public static BonusAccountDto ToBonusAccountDto(this BonusAccount account) => new()
     {
         Id = account.Id,
         UserId = account.UserId,
@@ -16,7 +16,7 @@ public static class BonusMappers
         UpdatedAt = account.UpdatedAt
     };
 
-    public static BonusTransactionDto ToBonusTransactionDto(this BonusTransactionModel tx) => new()
+    public static BonusTransactionDto ToBonusTransactionDto(this BonusTransaction tx) => new()
     {
         Id = tx.Id,
         Type = tx.Type,
@@ -26,7 +26,7 @@ public static class BonusMappers
         CreatedAt = tx.CreatedAt
     };
 
-    public static BonusSettingsDto ToBonusSettingsDto(this BonusSettingsModel settings) => new()
+    public static BonusSettingsDto ToBonusSettingsDto(this BonusSettings settings) => new()
     {
         EarningRate = settings.EarningRate,
         MinOrderAmountToEarn = settings.MinOrderAmountToEarn,

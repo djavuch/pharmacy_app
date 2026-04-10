@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using PharmacyApp.Application.DTOs.Discount;
+using PharmacyApp.Application.Contracts.Discount;
 using PharmacyApp.Domain.Enums;
 
 namespace PharmacyApp.Application.DTOValidations.AdminValidations.Discounts;

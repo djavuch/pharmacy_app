@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class OrderConfiguration : IEntityTypeConfiguration<OrderModel>
+public class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
-    public void Configure(EntityTypeBuilder<OrderModel> builder)
+    public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.HasKey(o => o.Id);
 

@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using PharmacyApp.Application.DTOs.Order;
+using PharmacyApp.Application.Contracts.Order;
 using PharmacyApp.Application.DTOValidations.Address;
 
 namespace PharmacyApp.Application.DTOValidations.Orders;

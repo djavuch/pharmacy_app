@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class CartItemConfiguration : IEntityTypeConfiguration<CartItemModel>
+public class CartItemConfiguration : IEntityTypeConfiguration<CartItem>
 {
-    public void Configure(EntityTypeBuilder<CartItemModel> builder)
+    public void Configure(EntityTypeBuilder<CartItem> builder)
     {
         builder.HasKey(ci => new { ci.CartId, ci.ProductId });
 

@@ -1,12 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
-using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.User.UserProfileDto;
-using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.User.Profile;
+using PharmacyApp.Application.Contracts.User.Admin;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
-using PharmacyApp.Domain.Entities;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
+using PharmacyApp.Domain.Common;
 
 namespace PharmacyApp.Application.Services;
 
@@ -22,29 +23,17 @@ public class UserService : IUserService
         _cache = cache;
     }
 
-    public async Task<UserDto?> GetUserByIdAsync(string userId)
+    public async Task<Result<UserProfileDto>> GetCurrentUserProfileAsync(string userId)
     {
-        var user = await _unitOfWork.Users.GetByIdAsync(userId);
-        if (user is null)
-        {
-            return null;
-        }
-        return user.ToUserDto();
-    }
-
-    public async Task<UserDto?> GetCurrentUserProfileAsync(string userId)
-    {
-        return await _cache.GetOrCreateAsync(
-            $"user_v{_cacheVersion}:profile:{userId}",
-            async cancel =>
+        var userDto = await _cache.GetOrCreateAsync(
+            CacheKeys.Users.Profile(_cacheVersion, userId),
+            async _ =>
             {
                 var user = await _unitOfWork.Users.GetCurrentProfileAsync(userId);
 
                 if (user is null)
-                {
                     return null;
-                }
-
+                
                 return user.ToUserDto();
             },
             new HybridCacheEntryOptions
@@ -53,23 +42,21 @@ public class UserService : IUserService
                 LocalCacheExpiration = TimeSpan.FromMinutes(5)
             }
         );
+        if (userDto is null)
+            return Result<UserProfileDto>.NotFound("User not found");
+        
+        return Result<UserProfileDto>.Success(userDto);
     }
 
-    public async Task<PaginatedList<UserOrdersDto?>> GetUserOrdersAsync(string userId, int pageIndex, int pageSize)
+    public async Task<PaginatedList<UserOrderSummaryDto?>> GetUserOrdersAsync(string userId, QueryParams query)
     {
         return await _cache.GetOrCreateAsync(
-            $"user_v{_cacheVersion}:orders:{userId}:{pageIndex}:{pageSize}",
+            CacheKeys.Users.Orders(_cacheVersion, userId, query),
             async cancel =>
             {
-                var orders = await _unitOfWork.Users.GetCurrentOrders(userId, pageIndex, pageSize);
+                var orders = await _unitOfWork.Users.GetCurrentOrders(userId, query.PageIndex, query.PageSize);
                 var userOrdersDtos = orders.Items.Select(o => o.ToUserOrdersDto()).ToList();
-                return new PaginatedList<UserOrdersDto?>
-                {
-                    Items = userOrdersDtos,
-                    PageIndex = orders.PageIndex,
-                    PageSize = pageSize,
-                    TotalPages = orders.TotalPages
-                };
+                return PaginatedList<UserOrderSummaryDto?>.Create(userOrdersDtos, orders.TotalPages, query);
             },
             new HybridCacheEntryOptions
             {
@@ -79,21 +66,17 @@ public class UserService : IUserService
         );
     }
 
-    public async Task<PaginatedList<UserReviewsDto?>> GetUserReviewsAsync(string userId, int pageIndex, int pageSize)
+    public async Task<PaginatedList<UserReviewSummaryDto?>> GetUserReviewsAsync(string userId, ReviewQueryParams queryParams)
     {
         return await _cache.GetOrCreateAsync(
-            $"user_v{_cacheVersion}:reviews:{userId}:{pageIndex}:{pageSize}",
+            CacheKeys.Users.Reviews(_cacheVersion, userId, queryParams),
             async cancel =>
             {
-                var reviews = await _unitOfWork.Users.GetCurrentReviews(userId, pageIndex, pageSize);
+                var reviews = await _unitOfWork.Users.GetCurrentReviews(userId, queryParams.PageIndex, queryParams.PageSize);
                 var userReviewsDtos = reviews.Items.Select(r => r.ToUserReviewsDto()).ToList();
-                return new PaginatedList<UserReviewsDto?>
-                {
-                    Items = userReviewsDtos,
-                    PageIndex = reviews.PageIndex,
-                    PageSize = pageSize,
-                    TotalPages = reviews.TotalPages
-                };
+                
+                return PaginatedList<UserReviewSummaryDto?>.Create(userReviewsDtos,  reviews.TotalPages, queryParams);
+              
             },
             new HybridCacheEntryOptions
             {
@@ -103,15 +86,13 @@ public class UserService : IUserService
         );
     }
 
-    public async Task UpdateUserProfileAsync(UpdateUserDto updateUserDto)
+    public async Task<Result> UpdateUserProfileAsync(UpdateUserDto updateUserDto)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(updateUserDto.UserId);
 
         if (user is null)
-        {
-            throw new NotFoundException("User not found");
-        }
-
+           return Result.NotFound("User not found");
+        
         user.FirstName = updateUserDto.FirstName;
         user.LastName = updateUserDto.LastName;
         user.Address = updateUserDto.Address;
@@ -122,48 +103,48 @@ public class UserService : IUserService
         await _unitOfWork.SaveChangesAsync();
         
         InvalidateUserCache();
+        return Result.Success();
     }
 
     // admin only
 
-    public async Task<PaginatedList<UserDto>> GetAllUsersAsync(int pageIndex = 1, int pageSize = 10,
-        string? filterOn = null, string? filterQuery = null, string? sortBy = null, bool isAscending = true)
+    public async Task<PaginatedList<AdminUserDto>> GetAllUsersAsync(QueryParams query)
     {
         return await _cache.GetOrCreateAsync(
-            $"users_v{_cacheVersion}:all:{pageIndex}:{pageSize}:{filterOn}:{filterQuery}:{sortBy}:{isAscending}",
+            CacheKeys.Users.AllPaged(_cacheVersion, query),
             async cancel =>
             {
                 var usersQuery = _unitOfWork.Users.GetAllAsync();
 
                 // Filtering
-                if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
+                if (!string.IsNullOrWhiteSpace(query.FilterOn) && !string.IsNullOrWhiteSpace(query.FilterQuery))
                 {
-                    if (filterOn.Equals("UserName", StringComparison.OrdinalIgnoreCase))
+                    if (query.FilterOn.Equals("UserName", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = usersQuery.Where(u => u.UserName.ToLower().Contains(filterQuery.ToLower()));
+                        usersQuery = usersQuery.Where(u => u.UserName.ToLower().Contains(query.FilterQuery.ToLower()));
                     }
 
-                    if (filterOn.Equals("Email", StringComparison.OrdinalIgnoreCase))
+                    if (query.FilterOn.Equals("Email", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = usersQuery.Where(u => u.Email.ToLower().Contains(filterQuery.ToLower()));
+                        usersQuery = usersQuery.Where(u => u.Email.ToLower().Contains(query.FilterQuery.ToLower()));
                     }
 
-                    if (filterOn.Equals("FirstName", StringComparison.OrdinalIgnoreCase))
+                    if (query.FilterOn.Equals("FirstName", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = usersQuery.Where(u => u.FirstName.ToLower().Contains(filterQuery.ToLower()));
+                        usersQuery = usersQuery.Where(u => u.FirstName.ToLower().Contains(query.FilterQuery.ToLower()));
                     }
 
-                    if (filterOn.Equals("LastName", StringComparison.OrdinalIgnoreCase))
+                    if (query.FilterOn.Equals("LastName", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = usersQuery.Where(u => u.LastName.ToLower().Contains(filterQuery.ToLower()));
+                        usersQuery = usersQuery.Where(u => u.LastName.ToLower().Contains(query.FilterQuery.ToLower()));
                     }
 
-                    if (DateTime.TryParse(filterQuery, out var dateOfBirth))
+                    if (DateTime.TryParse(query.FilterQuery, out var dateOfBirth))
                     {
                         usersQuery = usersQuery.Where(u => u.DateOfBirth.Date == dateOfBirth.Date);
                     }
 
-                    if (DateTime.TryParse(filterQuery, out var createdAt))
+                    if (DateTime.TryParse(query.FilterQuery, out var createdAt))
                     {
                         usersQuery = usersQuery.Where(u => u.CreatedAt.Date == createdAt.Date);
                     }
@@ -172,53 +153,49 @@ public class UserService : IUserService
                 var totalCount = await usersQuery.CountAsync();
 
                 // Sorting
-                if (!string.IsNullOrWhiteSpace(sortBy))
+                if (!string.IsNullOrWhiteSpace(query.SortBy))
                 {
-                    if (sortBy.Equals("UserName", StringComparison.OrdinalIgnoreCase))
+                    if (query.SortBy.Equals("UserName", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = isAscending ? usersQuery.OrderBy(u => u.UserName) : usersQuery.OrderByDescending(u => u.UserName);
+                        usersQuery = query.IsAscending ? usersQuery.OrderBy(u => u.UserName) : usersQuery.OrderByDescending(u => u.UserName);
                     }
-                    else if (sortBy.Equals("Email", StringComparison.OrdinalIgnoreCase))
+                    else if (query.SortBy.Equals("Email", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = isAscending ? usersQuery.OrderBy(u => u.Email) : usersQuery.OrderByDescending(u => u.Email);
+                        usersQuery = query.IsAscending ? usersQuery.OrderBy(u => u.Email) : usersQuery.OrderByDescending(u => u.Email);
                     }
-                    else if (sortBy.Equals("FirstName", StringComparison.OrdinalIgnoreCase))
+                    else if (query.SortBy.Equals("FirstName", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = isAscending ? usersQuery.OrderBy(u => u.FirstName) : usersQuery.OrderByDescending(u => u.FirstName);
+                        usersQuery = query.IsAscending ? usersQuery.OrderBy(u => u.FirstName) : usersQuery.OrderByDescending(u => u.FirstName);
                     }
-                    else if (sortBy.Equals("LastName", StringComparison.OrdinalIgnoreCase))
+                    else if (query.SortBy.Equals("LastName", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = isAscending ? usersQuery.OrderBy(u => u.LastName) : usersQuery.OrderByDescending(u => u.LastName);
+                        usersQuery = query.IsAscending ? usersQuery.OrderBy(u => u.LastName) : usersQuery.OrderByDescending(u => u.LastName);
                     }
-                    else if (sortBy.Equals("DateOfBirth", StringComparison.OrdinalIgnoreCase))
+                    else if (query.SortBy.Equals("DateOfBirth", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = isAscending ? usersQuery.OrderBy(u => u.DateOfBirth) : usersQuery.OrderByDescending(u => u.DateOfBirth);
+                        usersQuery = query.IsAscending ? usersQuery.OrderBy(u => u.DateOfBirth) : usersQuery.OrderByDescending(u => u.DateOfBirth);
                     }
-                    else if (sortBy.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase))
+                    else if (query.SortBy.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase))
                     {
-                        usersQuery = isAscending ? usersQuery.OrderBy(u => u.CreatedAt) : usersQuery.OrderByDescending(u => u.CreatedAt);
+                        usersQuery = query.IsAscending ? usersQuery.OrderBy(u => u.CreatedAt) : usersQuery.OrderByDescending(u => u.CreatedAt);
                     }
                 }
-
-                var skipResults = (pageIndex - 1) * pageSize;
-
-                var users = await usersQuery.Skip(skipResults).Take(pageSize).ToListAsync();
                 
-                var userDtos = new List<UserDto>();
+                var users = await usersQuery
+                    .Skip((query.PageIndex - 1) * query.PageSize)
+                    .Take(query.PageSize)
+                    .ToListAsync();
+                
+                var userDtos = new List<AdminUserDto>();
+                
                 foreach (var user in users)
                 {
                     var roles = await _unitOfWork.Users.GetRolesAsync(user);
-                    var userDto = user.ToUserDto(roles.FirstOrDefault()); 
+                    var userDto = user.ToAdminUserDto(roles.FirstOrDefault()); 
                     userDtos.Add(userDto);
                 }
-
-                return new PaginatedList<UserDto>
-                {
-                    PageIndex = pageIndex,
-                    PageSize = pageSize,
-                    TotalPages = totalCount,
-                    Items = userDtos
-                };
+                
+                return PaginatedList<AdminUserDto>.Create(userDtos, totalCount, query);
             },
             new HybridCacheEntryOptions
             {
@@ -228,13 +205,11 @@ public class UserService : IUserService
         );
     }
     
-    public async Task<UserDto> LockUserAsync(string userId, DateTimeOffset? lockoutEnd = null)
+    public async Task<Result<AdminUserDto>> LockUserAsync(string userId, DateTimeOffset? lockoutEnd = null)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user is null)
-        {
-            throw new NotFoundException("User not found");
-        }
+            return Result<AdminUserDto>.NotFound("User not found");
 
         // Lock for 30 days or a specified period
         var lockoutEndDate = lockoutEnd ?? DateTimeOffset.UtcNow.AddDays(30);
@@ -247,49 +222,40 @@ public class UserService : IUserService
         InvalidateUserCache();
     
         var roles = await _unitOfWork.Users.GetRolesAsync(user);
-        return user.ToUserDto(roles.FirstOrDefault());
+        return Result<AdminUserDto>.Success(user.ToAdminUserDto(roles.FirstOrDefault()));
     }
 
-    public async Task<UserDto> UnlockUserAsync(string userId)
+    public async Task<Result<AdminUserDto>> UnlockUserAsync(string userId)
     {
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user is null)
-        {
-            throw new NotFoundException("User not found");
-        }
-
+            return Result<AdminUserDto>.NotFound("User not found");
+        
         await _unitOfWork.Auth.UnlockUserAsync(user);
     
         InvalidateUserCache();
     
         var roles = await _unitOfWork.Users.GetRolesAsync(user);
-        return user.ToUserDto(roles.FirstOrDefault());
+        return Result<AdminUserDto>.Success(user.ToAdminUserDto(roles.FirstOrDefault()));
     }
 
-    public async Task<UserDto> ChangeUserRoleAsync(string userId, string role)
+    public async Task<Result<AdminUserDto>> ChangeUserRoleAsync(string userId, string role)
     {
         if (string.IsNullOrWhiteSpace(role))
-        {
-            throw new BadRequestException("Role is required.");
-        }
+            return Result<AdminUserDto>.BadRequest("Role is required.");
         
         var allowedRoles = new[] {"Admin", "Pharmacist", "Manager", "Customer"};
         var normalizedRole = role.Trim();
 
         if (!allowedRoles.Contains(normalizedRole, StringComparer.OrdinalIgnoreCase))
-        {
-            throw new BadRequestException("Unsupported role");
-        }
+            return Result<AdminUserDto>.BadRequest("Unsupported role");
         
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user is null)
-        {
-            throw new NotFoundException("User not found");
-        }
+            return Result<AdminUserDto>.NotFound("User not found");
         
         var currentRoles = await _unitOfWork.Users.GetRolesAsync(user);
         
-        // An additional check that will prevent the removal of the last admin from the app
         if (currentRoles.Contains("Admin", StringComparer.OrdinalIgnoreCase) 
             && !normalizedRole.Equals("Admin", StringComparison.OrdinalIgnoreCase))
         {
@@ -307,14 +273,12 @@ public class UserService : IUserService
             }
         
             if (adminCount <= 1)
-            {
-                throw new BadRequestException("Cannot remove the last administrator from the system");
-            }
+                return Result<AdminUserDto>.BadRequest("Cannot remove the last administrator from the system");
         }
         
         if (currentRoles.Count == 1 && currentRoles.Contains(normalizedRole, StringComparer.OrdinalIgnoreCase))
         {
-            return user.ToUserDto(normalizedRole);
+            return Result<AdminUserDto>.Success(user.ToAdminUserDto(normalizedRole));
         }
 
         if (currentRoles.Count > 0)
@@ -322,22 +286,18 @@ public class UserService : IUserService
             var removeResult = await _unitOfWork.Users.RemoveFromRolesAsync(user, currentRoles);
             
             if (!removeResult.Succeeded)
-            {
-                throw new BadRequestException("Failed to remove current roles.");
-            }
+                return Result<AdminUserDto>.BadRequest("Failed to remove current roles.");
         }
         
         var addResult = await _unitOfWork.Auth.AddToRoleAsync(user, normalizedRole);
         if (!addResult.Succeeded)
-        {
-            throw new BadRequestException("Failed to assign role.");
-        }
+            return Result<AdminUserDto>.BadRequest("Failed to assign role.");
         
         await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(userId);
         
         InvalidateUserCache();
         
-        return user.ToUserDto(normalizedRole);
+        return Result<AdminUserDto>.Success(user.ToAdminUserDto(normalizedRole));
     }
 
     private static void InvalidateUserCache()

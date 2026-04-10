@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities.PromoCode;
 
 namespace PharmacyApp.Infrastructure.Data.Configurations;
 
-public class PromoCodeConfiguration : IEntityTypeConfiguration<PromoCodeModel>
+public class PromoCodeConfiguration : IEntityTypeConfiguration<PromoCode>
 {
-    public void Configure(EntityTypeBuilder<PromoCodeModel> builder)
+    public void Configure(EntityTypeBuilder<PromoCode> builder)
     {
         builder.HasKey(p => p.PromoCodeId);
 

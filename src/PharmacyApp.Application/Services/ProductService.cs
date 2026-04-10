@@ -1,7 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
-using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.Product;
 using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
@@ -9,7 +7,11 @@ using PharmacyApp.Domain.Entities;
 using System.Collections.Concurrent;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.Product;
+using PharmacyApp.Application.Interfaces.Repositories;
+using PharmacyApp.Domain.Common;
 
 namespace PharmacyApp.Application.Services;
 public class ProductService : IProductService
@@ -33,15 +35,9 @@ public class ProductService : IProductService
         _logger = logger;
     }
 
-    public async Task<PaginatedList<ProductDto>> GetAllProductsAsync(
-        int pageIndex = 1, 
-        int pageSize = 10, 
-        string? filterOn = null, 
-        string? filterQuery = null, 
-        string? sortBy = null, 
-        bool isAscending = true)
+    public async Task<PaginatedList<ProductDto>> GetAllProductsAsync(QueryParams query)
     {
-        var cacheKey = $"products_v{_cacheVersion}_{pageIndex}_{pageSize}_{filterOn}_{filterQuery}_{sortBy}_{isAscending}";
+        var cacheKey = CacheKeys.Products.All(_cacheVersion, query);
 
         return await _cache.GetOrCreateAsync(
             cacheKey,
@@ -51,32 +47,34 @@ public class ProductService : IProductService
                 
                 var productsQuery = _unitOfWork.Products.GetAllAsync();
 
-                if (!string.IsNullOrWhiteSpace(filterOn) && !string.IsNullOrWhiteSpace(filterQuery))
+                if (!string.IsNullOrWhiteSpace(query.FilterOn) && !string.IsNullOrWhiteSpace(query.FilterQuery))
                 {
-                    productsQuery = filterOn.ToLower() switch
+                    productsQuery = query.FilterOn!.ToLower() switch
                     {
-                        "name" => productsQuery.Where(p => p.Name.ToLower().Contains(filterQuery.ToLower())),
-                        "category" => productsQuery.Where(p => p.Category.CategoryName.ToLower().Contains(filterQuery.ToLower())),
-                        "minprice" when decimal.TryParse(filterQuery, NumberStyles.Any, CultureInfo.InvariantCulture, out var minPrice) =>
+                        "name" => productsQuery.Where(p => p.Name.ToLower().Contains(query.FilterQuery.ToLower())),
+                        "category" => productsQuery.Where(p => p.Category.CategoryName.ToLower().Contains(query.FilterQuery.ToLower())),
+                        "minprice" when decimal.TryParse(query.FilterQuery, NumberStyles.Any, CultureInfo.InvariantCulture, out var minPrice) =>
                             productsQuery.Where(p => p.Price >= minPrice),
-                        "maxprice" when decimal.TryParse(filterQuery, NumberStyles.Any, CultureInfo.InvariantCulture, out var maxPrice) =>
+                        "maxprice" when decimal.TryParse(query.FilterQuery, NumberStyles.Any, CultureInfo.InvariantCulture, out var maxPrice) =>
                             productsQuery.Where(p => p.Price <= maxPrice),
                         "instock" => productsQuery.Where(p => p.StockQuantity > 0),
                         _ => productsQuery
                     };
                 }
 
-                productsQuery = (sortBy?.ToLower()) switch
+                productsQuery = (query.SortBy?.ToLower()) switch
                 {
-                    "name" => isAscending ? productsQuery.OrderBy(p => p.Name) : productsQuery.OrderByDescending(p => p.Name),
-                    "price" => isAscending ? productsQuery.OrderBy(p => p.Price) : productsQuery.OrderByDescending(p => p.Price),
-                    "stockquantity" => isAscending ? productsQuery.OrderBy(p => p.StockQuantity) : productsQuery.OrderByDescending(p => p.StockQuantity),
+                    "name" => query.IsAscending ? productsQuery.OrderBy(p => p.Name) : productsQuery.OrderByDescending(p => p.Name),
+                    "price" => query.IsAscending ? productsQuery.OrderBy(p => p.Price) : productsQuery.OrderByDescending(p => p.Price),
+                    "stockquantity" => query.IsAscending ? productsQuery.OrderBy(p => p.StockQuantity) : productsQuery.OrderByDescending(p => p.StockQuantity),
                     _ => productsQuery.OrderBy(p => p.Id)
                 };
 
                 var totalCount = await productsQuery.CountAsync();
-                var skipResults = (pageIndex - 1) * pageSize;
-                var products = await productsQuery.Skip(skipResults).Take(pageSize).ToListAsync();
+                var products = await productsQuery
+                    .Skip((query.PageIndex - 1) * query.PageSize)
+                    .Take(query.PageSize)
+                    .ToListAsync();
 
                 var productDtos = new List<ProductDto>();
                 foreach (var product in products)
@@ -85,13 +83,7 @@ public class ProductService : IProductService
                     productDtos.Add(product.ToProductDto(discountedPrice));
                 }
 
-                return new PaginatedList<ProductDto>
-                {
-                    PageIndex = pageIndex,
-                    PageSize = pageSize,
-                    TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
-                    Items = productDtos
-                };
+                return PaginatedList<ProductDto>.Create(productDtos, totalCount, query);
             },
             new HybridCacheEntryOptions
             {
@@ -101,103 +93,86 @@ public class ProductService : IProductService
         );
     }
 
-    public async Task<ProductDto?> GetProductByIdAsync(int productId)
+    public async Task<Result<ProductDto>> GetProductByIdAsync(int productId)
     {
-        return await _cache.GetOrCreateAsync(
-            $"products_v{_cacheVersion}:id:{productId}",
-            async cancel =>
+        var productDto = await _cache.GetOrCreateAsync(
+            CacheKeys.Products.ById(_cacheVersion, productId),
+            async _ =>
             {
                 var product = await _unitOfWork.Products.GetByIdAsync(productId);
                 if (product is null)
-                    return null;
+                    return null; 
 
-                var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(product.Id, product.CategoryId, product.Price);
+                var discountedPrice = await _discountService
+                    .CalculateDiscountedPriceAsync(product.Id, product.CategoryId, product.Price);
                 return product.ToProductDto(discountedPrice);
             },
-            new HybridCacheEntryOptions()
-            {
-                Expiration = TimeSpan.FromMinutes(5),
-                LocalCacheExpiration = TimeSpan.FromMinutes(5)
-            }
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) }
         );
+
+        if (productDto is null)
+            return Result<ProductDto>.NotFound($"Product with id '{productId}' was not found.");
+
+        return Result<ProductDto>.Success(productDto);
     }
 
-    public async Task<ProductDto> AddProductAsync(CreateProductDto createProductDto)
+    public async Task<Result<ProductDto>> AddProductAsync(CreateProductDto createProductDto)
     {
         var category = await _unitOfWork.Categories.GetByIdAsync(createProductDto.CategoryId);
 
         if (category is null)
-        {
-            throw new ConflictException($"Category '{createProductDto.CategoryId}' does not exist.");
-        }
+            return Result<ProductDto>.NotFound($"Category '{createProductDto.CategoryId}' does not exist.");
 
-        var product = new ProductModel
-        {
-            Name = createProductDto.Name,
-            Description = createProductDto.Description ?? string.Empty,
-            Price = createProductDto.Price,
-            StockQuantity = createProductDto.StockQuantity,
-            ImageUrl = createProductDto.ImageUrl,
-            Category = category
-        };
-
-        product.ValidateBusinessRules();
-
-        var addedProduct = await _unitOfWork.Products.AddAsync(product);
+        var product = new Product(createProductDto.Name, createProductDto.Description ?? string.Empty,
+            createProductDto.Price, createProductDto.StockQuantity, createProductDto.ImageUrl, category);
+        
+        await _unitOfWork.Products.AddAsync(product);
         await _unitOfWork.SaveChangesAsync();
         
         InvalidateProductsCache();
 
-        return product.ToProductDto();
+        return Result<ProductDto>.Success(product.ToProductDto());
     }
 
-    public async Task UpdateProductAsync(UpdateProductDto updateProductDto)
+    public async Task<Result> UpdateProductAsync(UpdateProductDto updateProductDto)
     {
         var product = await _unitOfWork.Products.GetByIdAsync(updateProductDto.ProductId);
 
-        if (product is null)
-        {
-            throw new NotFoundException("Product not found");
-        }
-
+        if (product is null) 
+            return Result.NotFound("Product not found");
+        
         var category = await _unitOfWork.Categories.GetByIdAsync(updateProductDto.CategoryId);
 
         if (category is null)
-        {
-            throw new ConflictException($"Category '{updateProductDto.CategoryId}' does not exist.");
-        }
+            return Result.NotFound($"Category '{updateProductDto.CategoryId}' does not exist.");
+        
 
-        product.Name = updateProductDto.Name;
-        product.Description = updateProductDto.Description;
-        product.Price = updateProductDto.Price;
-        product.StockQuantity = updateProductDto.StockQuantity;
-        product.ImageUrl = updateProductDto.ImageUrl;
-        product.Category = category;
-
-        product.ValidateBusinessRules();
+        product.Update(updateProductDto.Name, updateProductDto.Description, updateProductDto.Price,
+            updateProductDto.StockQuantity, updateProductDto.ImageUrl, category);
         
         await _unitOfWork.Products.UpdateAsync(product);
         await _unitOfWork.SaveChangesAsync();
-
+        
         InvalidateProductsCache();
+        return Result.Success();
     }
 
-    public async Task DeleteProductAsync(int productId)
+    public async Task<Result> DeleteProductAsync(int productId)
     {
         var product = await _unitOfWork.Products.GetByIdAsync(productId);
 
         if (product is null) 
-        {
-            throw new NotFoundException("Product not found");
-        }
+            return Result.NotFound("Product not found");
+        
 
         await _unitOfWork.Products.DeleteAsync(productId);
         await _unitOfWork.SaveChangesAsync();
-
+        
         InvalidateProductsCache();
+        return Result.Success();
     }
 
-    public async Task UpdateStockAsync(int productId, int quantityChange)
+    public async Task<Result> UpdateStockAsync(int productId, int quantityChange)
     {
         var semaphore = _productLocks.GetOrAdd(productId, _ => new SemaphoreSlim(1, 1));
 
@@ -207,20 +182,17 @@ public class ProductService : IProductService
             var product = await _unitOfWork.Products.GetByIdAsync(productId);
 
             if (product is null)
-            {
-                throw new NotFoundException("Product not found");
-            }
+                return Result.NotFound("Product not found");
 
             if (product.StockQuantity + quantityChange < 0) 
-            { 
-                throw new ConflictException("Insufficient stock to decrease.");      
-            }
+                return Result.Conflict("Insufficient stock to decrease.");      
 
-            product.StockQuantity += quantityChange;
+            product.UpdateStockQuantity(quantityChange);
             await _unitOfWork.Products.UpdateAsync(product);
             await _unitOfWork.SaveChangesAsync();
-
+            
             InvalidateProductsCache();
+            return Result.Success();
         }
         finally
         {

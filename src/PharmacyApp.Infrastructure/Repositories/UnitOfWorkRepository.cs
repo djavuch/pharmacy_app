@@ -13,8 +13,8 @@ namespace PharmacyApp.Infrastructure.Repositories;
 public class UnitOfWorkRepository : IUnitOfWorkRepository
 {
     private readonly PharmacyAppDbContext _dbContext;
-    private readonly UserManager<UserModel> _userManager;
-    private readonly SignInManager<UserModel> _signInManager;
+    private readonly UserManager<User> _userManager;
+    private readonly SignInManager<User> _signInManager;
     private readonly ILoggerFactory _loggerFactory;
     private IUserRepository _userRepository;
     private IAuthRepository _authRepository;
@@ -32,8 +32,8 @@ public class UnitOfWorkRepository : IUnitOfWorkRepository
 
     public UnitOfWorkRepository(
         PharmacyAppDbContext dbContext,
-        UserManager<UserModel> userManager,
-        SignInManager<UserModel> signInManager,
+        UserManager<User> userManager,
+        SignInManager<User> signInManager,
         ILoggerFactory loggerFactory)
     {
         _dbContext = dbContext;

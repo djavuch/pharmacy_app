@@ -5,9 +5,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class UserConfiguration : IEntityTypeConfiguration<UserModel>
+public class UserConfiguration : IEntityTypeConfiguration<User>
 {
-    public void Configure(EntityTypeBuilder<UserModel> builder)
+    public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.HasKey(u => u.Id);
         

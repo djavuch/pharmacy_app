@@ -13,26 +13,26 @@ public class ProductRepository: IProductRepository
         _dbContext = dbContext;
     }
 
-    public IQueryable<ProductModel> GetAllAsync()
+    public IQueryable<Product> GetAllAsync()
     {
         return _dbContext.Products
             .Include(p => p.Category)
             .AsQueryable();
     }
 
-    public async Task<ProductModel?> GetByIdAsync(int productId)
+    public async Task<Product?> GetByIdAsync(int productId)
     {
         return await _dbContext.Products
             .FirstOrDefaultAsync(p => p.Id == productId);
     }
 
-    public async Task<ProductModel> AddAsync(ProductModel product)
+    public async Task<Product> AddAsync(Product product)
     {
         await _dbContext.Products.AddAsync(product);
         return product;
     }
 
-    public Task UpdateAsync(ProductModel product)
+    public Task UpdateAsync(Product product)
     {
         _dbContext.Products.Update(product);
         return Task.CompletedTask;
@@ -47,14 +47,14 @@ public class ProductRepository: IProductRepository
         }
     }
 
-    public async Task<List<ProductModel>> GetByIdsAsync(List<int> productIds)
+    public async Task<List<Product>> GetByIdsAsync(List<int> productIds)
     {
         return await _dbContext.Products.AsNoTracking()
             .Where(p => productIds.Contains(p.Id))
             .ToListAsync();
     }
 
-    public async Task UpdateRangeAsync(IEnumerable<ProductModel> products)
+    public async Task UpdateRangeAsync(IEnumerable<Product> products)
     {
         _dbContext.Products.UpdateRange(products);
         await Task.CompletedTask;

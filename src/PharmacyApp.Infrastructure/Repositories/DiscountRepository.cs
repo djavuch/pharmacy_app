@@ -14,7 +14,7 @@ public class DiscountRepository : IDiscountRepository
         _dbContext = dbContext;
     }
 
-    public async Task<DiscountModel?> GetByIdAsync(Guid discountId)
+    public async Task<Discount?> GetByIdAsync(Guid discountId)
     {
         return await _dbContext.Discounts
             .Include(d => d.ProductDiscounts)
@@ -25,7 +25,7 @@ public class DiscountRepository : IDiscountRepository
             .FirstOrDefaultAsync(d => d.DiscountId == discountId);
     }
 
-    public async Task<IEnumerable<DiscountModel>> GetAllAsync()
+    public async Task<IEnumerable<Discount>> GetAllAsync()
     {
         return await _dbContext.Discounts
             .AsNoTracking()
@@ -35,7 +35,7 @@ public class DiscountRepository : IDiscountRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<DiscountModel>> GetActiveDiscountsAsync()
+    public async Task<IEnumerable<Discount>> GetActiveDiscountsAsync()
     {
         var currentDate = DateTime.UtcNow;
         return await _dbContext.Discounts
@@ -47,17 +47,15 @@ public class DiscountRepository : IDiscountRepository
             .ToListAsync();
     }
 
-    public async Task<DiscountModel> AddAsync(DiscountModel discount)
+    public async Task<Discount> AddAsync(Discount discount)
     {
-        discount.ValidateBusinessRules();   
         _dbContext.Discounts.Add(discount);
         await _dbContext.SaveChangesAsync();
         return discount;
     }
 
-    public async Task UpdateAsync(DiscountModel discount)
+    public async Task UpdateAsync(Discount discount)
     {
-        discount.ValidateBusinessRules();
         _dbContext.Discounts.Update(discount);
         await _dbContext.SaveChangesAsync();
     }
@@ -72,7 +70,7 @@ public class DiscountRepository : IDiscountRepository
         }
     }
 
-    public async Task<IEnumerable<DiscountModel>> GetDiscountsByProductIdAsync(int productId)
+    public async Task<IEnumerable<Discount>> GetDiscountsByProductIdAsync(int productId)
     {
         var now = DateTime.UtcNow;
         return await _dbContext.Discounts
@@ -81,7 +79,7 @@ public class DiscountRepository : IDiscountRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<DiscountModel>> GetDiscountsByCategoryIdAsync(int categoryId)
+    public async Task<IEnumerable<Discount>> GetDiscountsByCategoryIdAsync(int categoryId)
         {
             var now = DateTime.UtcNow;
             return await _dbContext.Discounts

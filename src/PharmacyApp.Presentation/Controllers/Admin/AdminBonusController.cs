@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Admin.Bonus;
-using PharmacyApp.Application.DTOs.Bonus;
+using PharmacyApp.Application.Contracts.Bonus.Admin;
 using PharmacyApp.Application.Interfaces.Services;
 
 
@@ -39,16 +38,18 @@ public class AdminBonusController : ControllerBase
     // Manual adjustment bonus points for a user
     [HttpPost("accounts/{userId}/adjust")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> AdjustBonus(string userId, AdminAdjustBonusDto dto)
+    public async Task<IActionResult> AdjustBonus(string userId, AdjustBonusDto dto)
     {
-        await _bonusService.AdminAdjustAsync(userId, dto);
+        var result = await _bonusService.AdminAdjustAsync(userId, dto);
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
         return Ok(await _bonusService.GetOrCreateAccountAsync(userId));
     }
 
     // Update bonus settings
     [HttpPut("settings")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> UpdateSettings([FromBody] UpdateBonusSettingsDto dto)
+    public async Task<IActionResult> UpdateSettings(UpdateBonusSettingsDto dto)
     {
         return Ok(await _bonusService.UpdateSettingsAsync(dto));
     }

@@ -4,11 +4,11 @@ namespace PharmacyApp.Application.Interfaces.Repositories;
 
 public interface ICategoryRepository
 {
-    Task<IEnumerable<CategoryModel>> GetAllAsync();
-    Task<CategoryModel> GetByIdAsync(int categoryId);
-    Task<CategoryModel?> GetByNameAsync(string categoryName);
+    Task<IEnumerable<Category>> GetAllAsync();
+    Task<Category> GetByIdAsync(int categoryId);
+    Task<Category?> GetByNameAsync(string categoryName);
     //Task<CategoryModel> GetCategoryWithProductsAsync(string categoryName);
-    Task<CategoryModel> AddAsync(CategoryModel category);
-    Task UpdateAsync(CategoryModel category);
+    Task<Category> AddAsync(Category category);
+    Task UpdateAsync(Category category);
     Task DeleteAsync(int categoryId);
 }

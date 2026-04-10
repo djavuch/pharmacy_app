@@ -4,14 +4,14 @@ namespace PharmacyApp.Application.Interfaces.Repositories;
 
 public interface IDiscountRepository
 {
-    Task<DiscountModel?> GetByIdAsync(Guid discountId);
-    Task<IEnumerable<DiscountModel>> GetAllAsync();
-    Task<IEnumerable<DiscountModel>> GetActiveDiscountsAsync();
-    Task<DiscountModel> AddAsync(DiscountModel discount);
-    Task UpdateAsync(DiscountModel discount);
+    Task<Discount?> GetByIdAsync(Guid discountId);
+    Task<IEnumerable<Discount>> GetAllAsync();
+    Task<IEnumerable<Discount>> GetActiveDiscountsAsync();
+    Task<Discount> AddAsync(Discount discount);
+    Task UpdateAsync(Discount discount);
     Task DeleteAsync(Guid discountId);
 
     // Auto-implemented methods for fetching discounts by product and category
-    Task<IEnumerable<DiscountModel>> GetDiscountsByProductIdAsync(int productId);
-    Task<IEnumerable<DiscountModel>> GetDiscountsByCategoryIdAsync(int categoryId);
+    Task<IEnumerable<Discount>> GetDiscountsByProductIdAsync(int productId);
+    Task<IEnumerable<Discount>> GetDiscountsByCategoryIdAsync(int categoryId);
 }

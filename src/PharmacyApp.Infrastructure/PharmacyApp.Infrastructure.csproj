@@ -28,8 +28,4 @@
     <ProjectReference Include="..\PharmacyApp.Domain\PharmacyApp.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Abstractions\" />
-  </ItemGroup>
-
 </Project>

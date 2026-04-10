@@ -1,8 +1,12 @@
-﻿using PharmacyApp.Application.DTOs.Admin.Bonus;
-using PharmacyApp.Application.DTOs.Bonus;
+﻿using Microsoft.Extensions.Caching.Hybrid;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Contracts.Bonus;
+using PharmacyApp.Application.Contracts.Bonus.Admin;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities.Bonus;
 using PharmacyApp.Domain.Enums;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
@@ -12,10 +16,12 @@ namespace PharmacyApp.Application.Services;
 public class BonusService : IBonusService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
+    private readonly HybridCache _cache;
 
-    public BonusService(IUnitOfWorkRepository unitOfWork)
+    public BonusService(IUnitOfWorkRepository unitOfWork, HybridCache cache)
     {
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     // User
@@ -35,7 +41,7 @@ public class BonusService : IBonusService
 
     public async Task<decimal> EarnPointsAsync(string userId, int orderId, decimal paidAmount)
     {
-        var settings = await _unitOfWork.Bonuses.GetSettingsAsync();
+        var settings = await GetSettingsAsync();
 
         if (!settings.IsEarningEnabled)
             return 0;
@@ -49,7 +55,7 @@ public class BonusService : IBonusService
         account.Balance += earned;
         await _unitOfWork.Bonuses.UpdateAsync(account);
 
-        await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransactionModel
+        await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransaction
         {
             Id = Guid.NewGuid(),
             BonusAccountId = account.Id,
@@ -62,20 +68,20 @@ public class BonusService : IBonusService
         return earned;
     }
 
-    public async Task<decimal> RedeemPointsAsync(string userId, int orderId, decimal pointsToRedeem)
+    public async Task<Result<decimal>> RedeemPointsAsync(string userId, int orderId, decimal pointsToRedeem)
     {
         if (pointsToRedeem <= 0)
-            throw new BadRequestException("Bonus points must be greater than 0.");
+            return Result<decimal>.BadRequest("Points to redeem must be greater than 0.");
 
-        var settings = await _unitOfWork.Bonuses.GetSettingsAsync();
+        var settings = await GetSettingsAsync();
 
         if (!settings.IsRedemptionEnabled)
-            throw new BadRequestException("Bonus redemption is currently disabled.");
+            return Result<decimal>.BadRequest("Bonus redemption is currently disabled.");
 
         var account = await GetOrCreateAsync(userId);
 
         if (pointsToRedeem > account.Balance)
-            throw new BadRequestException(
+            return Result<decimal>.BadRequest(
                 $"Not enough points. Available: {account.Balance}, requested: {pointsToRedeem}.");
 
         var discount = Math.Round(pointsToRedeem, 2);
@@ -83,7 +89,7 @@ public class BonusService : IBonusService
         account.Balance -= pointsToRedeem;
         await _unitOfWork.Bonuses.UpdateAsync(account);
 
-        await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransactionModel
+        await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransaction
         {
             Id = Guid.NewGuid(),
             BonusAccountId = account.Id,
@@ -93,7 +99,7 @@ public class BonusService : IBonusService
             OrderId = orderId
         });
 
-        return discount;
+        return Result<decimal>.Success(discount);
     }
 
     public async Task ReverseOrderBonusesAsync(string userId, int orderId)
@@ -118,7 +124,7 @@ public class BonusService : IBonusService
 
         foreach (var tx in transactions)
         {
-            await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransactionModel
+            await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransaction
             {
                 Id = Guid.NewGuid(),
                 BonusAccountId = account.Id,
@@ -138,21 +144,20 @@ public class BonusService : IBonusService
         return accounts.Select(a => a.ToBonusAccountDto());
     }
 
-    public async Task AdminAdjustAsync(string userId, AdminAdjustBonusDto dto)
+    public async Task<Result> AdminAdjustAsync(string userId, AdjustBonusDto dto)
     {
         if (dto.Points == 0)
-            throw new BadRequestException("Points cannot be 0.");
+            return Result.Failure("Points cannot be 0.", 400);
 
         var account = await GetOrCreateAsync(userId);
 
         if (account.Balance + dto.Points < 0)
-            throw new BadRequestException(
-                $"Adjustment would result in negative balance. Current: {account.Balance}, delta: {dto.Points}.");
+            return Result.Failure($"Adjustment would result in negative balance. Current: {account.Balance}, delta: {dto.Points}.", 400);
 
         account.Balance += dto.Points;
         await _unitOfWork.Bonuses.UpdateAsync(account);
 
-        await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransactionModel
+        await _unitOfWork.Bonuses.AddTransactionAsync(new BonusTransaction
         {
             Id = Guid.NewGuid(),
             BonusAccountId = account.Id,
@@ -160,13 +165,16 @@ public class BonusService : IBonusService
             Points = dto.Points,
             Description = $"Admin adjustment: {dto.Reason}"
         });
+        
+        return Result.Success();
     }
 
     public async Task<BonusSettingsDto> GetSettingsAsync()
-    {
-        var settings = await _unitOfWork.Bonuses.GetSettingsAsync();
-        return settings.ToBonusSettingsDto();
-    }
+        => await _cache.GetOrCreateAsync(CacheKeys.Bonus.Settings, async _ =>
+        {
+            var settings = await _unitOfWork.Bonuses.GetSettingsAsync();
+            return settings.ToBonusSettingsDto();
+        }, new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(30) });
 
     public async Task<BonusSettingsDto> UpdateSettingsAsync(UpdateBonusSettingsDto dto)
     {
@@ -179,19 +187,21 @@ public class BonusService : IBonusService
         settings.IsRedemptionEnabled = dto.IsRedemptionEnabled;
 
         await _unitOfWork.Bonuses.UpdateSettingsAsync(settings);
+        await _cache.RemoveAsync(CacheKeys.Bonus.Settings);
         return settings.ToBonusSettingsDto();
     }
 
     // Check if a user exists
-    private async Task<BonusAccountModel> GetOrCreateAsync(string userId)
+    private async Task<BonusAccount> GetOrCreateAsync(string userId)
     {
         var account = await _unitOfWork.Bonuses.GetByUserIdAsync(userId);
         if (account is null)
         { 
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user == null) throw new NotFoundException("User not found.");
+            if (user is null) 
+                throw new NotFoundException("User not found.");
 
-            account = new BonusAccountModel { Id = Guid.NewGuid(), UserId = userId };
+            account = new BonusAccount(Guid.NewGuid(), userId, 0);
             await _unitOfWork.Bonuses.CreateAsync(account);
         }
         return account;

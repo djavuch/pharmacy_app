@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Common;
-using PharmacyApp.Application.DTOs.Order;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Common.Results;
+using PharmacyApp.Application.Contracts.Order;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
@@ -18,25 +19,35 @@ public class AdminOrderController : ControllerBase
         _orderService = orderService;
     }
 
-    [HttpGet("all-orders")]
-    public async Task<ApiResponse> GetAllOrders(int pageIndex = 1, int pageSize = 10)
+    [HttpGet]
+    public async Task<ApiResponse> GetAllOrders([FromQuery] QueryParams query)
     {
-        var orders = await _orderService.GetAllOrdersAsync(pageIndex, pageSize);
+        var orders = await _orderService.GetAllOrdersAsync(query);
         return new ApiResponse(true, null, orders);
     }
 
-    [HttpPut("update-order/{orderId}")]
+    [HttpPut("{orderId}")]
     public async Task<IActionResult> UpdateOrder(int orderId, UpdateOrderDto updateOrderDto)
-
     {
-        await _orderService.UpdateOrderAsync(orderId, updateOrderDto);
+        if (orderId != updateOrderDto.OrderId)
+            return BadRequest(new { message = "Order id in URL does not match body." });
+        
+        var result = await _orderService.UpdateOrderAsync(orderId, updateOrderDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 
-    [HttpPatch("update-order-status/{orderId}")]
+    [HttpPatch("{orderId}/status")]
     public async Task<IActionResult> UpdateOrderStatus(int orderId, UpdateOrderStatusDto updateOrderStatusDto)
     {
-        await _orderService.UpdateOrderStatusAsync(orderId, updateOrderStatusDto);
+        var result = await _orderService.UpdateOrderStatusAsync(orderId, updateOrderStatusDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();   
     }
 }

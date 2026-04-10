@@ -5,9 +5,9 @@ using PharmacyApp.Infrastructure.Seeds;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class ProductConfiguration : IEntityTypeConfiguration<ProductModel>
+public class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
-    public void Configure(EntityTypeBuilder<ProductModel> builder)
+    public void Configure(EntityTypeBuilder<Product> builder)
     {
         builder.HasKey(p => p.Id);
         builder

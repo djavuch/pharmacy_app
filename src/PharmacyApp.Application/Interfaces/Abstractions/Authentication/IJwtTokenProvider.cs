@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace PharmacyApp.Infrastructure.Abstractions.Authentication;
+namespace PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 
 public interface IJwtTokenProvider
 {

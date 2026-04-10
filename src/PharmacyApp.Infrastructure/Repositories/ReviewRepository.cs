@@ -13,31 +13,31 @@ public class ReviewRepository : IReviewRepository
         _dbContext = dbContext;
     }
 
-    public async Task<ReviewModel?> GetByIdAsync(int id)
+    public async Task<Review?> GetByIdAsync(int id)
     {
         return await _dbContext.Reviews
             .FirstOrDefaultAsync(r => r.Id == id);
     }
 
-    public IQueryable<ReviewModel> GetByProductId(int productId)
+    public IQueryable<Review> GetByProductId(int productId)
     {
         return _dbContext.Reviews
             .AsNoTracking()
             .Where(r => r.ProductId == productId);
     }
 
-    public async Task AddAsync(ReviewModel review)
+    public async Task AddAsync(Review review)
     {
         await _dbContext.Reviews.AddAsync(review);
     }
 
     //Admin specific
-    public IQueryable<ReviewModel> GetAll()
+    public IQueryable<Review> GetAll()
     {
         return _dbContext.Reviews.AsQueryable();
     }
 
-    public async Task DeleteAsync(ReviewModel review)
+    public async Task DeleteAsync(Review review)
     {
         var reviewToDelete = await _dbContext.Reviews.FindAsync(review.Id);
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers;
@@ -14,13 +15,13 @@ public class CategoryController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllCategories(int pageIndex = 1, int pageSize = 10)
+    public async Task<IActionResult> GetAllCategories([FromQuery] QueryParams query)
     {
-        var categories = await _categoryService.GetAllCategoriesAsync(pageIndex, pageSize);
+        var categories = await _categoryService.GetAllCategoriesAsync(query);
         return Ok(categories);
     }
     
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<IActionResult> GetCategoryById(int id)
     {
         var category = await _categoryService.GetCategoryByIdAsync(id);

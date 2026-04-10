@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Admin.User;
-using PharmacyApp.Application.DTOs.Common;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Common.Results;
+using PharmacyApp.Application.Contracts.User.Admin;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
@@ -22,21 +22,9 @@ public class AdminUserController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ApiResponse> GetAllUsers(
-        string? filterOn = null,
-        string? filterQuery = null,
-        bool? isAscending = null,
-        string? sortBy = null,
-        int pageIndex = 1,
-        int pageSize = 10)
+    public async Task<ApiResponse> GetAllUsers([FromQuery] QueryParams query)
     {
-        var users = await _userService.GetAllUsersAsync(
-            pageIndex,
-            pageSize,
-            filterOn,
-            filterQuery,
-            sortBy,
-            isAscending ?? true);
+        var users = await _userService.GetAllUsersAsync(query);
 
         return new ApiResponse(true, null, users);
     }
@@ -47,19 +35,25 @@ public class AdminUserController : ControllerBase
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
     
         if (currentUserId == userId)
-        {
-            throw new BadRequestException("You cannot lock your own account");
-        }
+            return new ApiResponse(false, "You cannot lock your own account", null);
     
-        var lockedUser = await _userService.LockUserAsync(userId, dto?.LockoutEnd);
-        return new ApiResponse(true, "User has been locked", lockedUser);
+        var result = await _userService.LockUserAsync(userId, dto?.LockoutEnd);
+        
+        if (!result.IsSuccess)
+            return new ApiResponse(false, result.Message, null);
+        
+        return new ApiResponse(true, "User has been locked", result.Value);
     }
 
     [HttpPost("{userId}/unlock")]
     public async Task<ApiResponse> UnlockUser(string userId)
     {
-        var unlockedUser = await _userService.UnlockUserAsync(userId);
-        return new ApiResponse(true, "User has been unlocked", unlockedUser);
+        var result = await _userService.UnlockUserAsync(userId);
+        
+        if (!result.IsSuccess)
+            return new ApiResponse(false, result.Message, null);
+        
+        return new ApiResponse(true, "User has been unlocked", result.Value);
     }
     
     [HttpPatch("{userId}/role")]
@@ -68,11 +62,13 @@ public class AdminUserController : ControllerBase
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         
         if (currentUserId == userId)
-        {
-            throw new BadRequestException("You cannot change your own role");
-        }
+            return new ApiResponse(false, "You cannot change your own role", null);
         
-        var updatedUser = await _userService.ChangeUserRoleAsync(userId, dto.Role); 
-        return new ApiResponse(true, "Role updated", updatedUser); 
+        var result = await _userService.ChangeUserRoleAsync(userId, dto.Role);
+        
+        if (!result.IsSuccess)
+            return new ApiResponse(false, result.Message, null);
+        
+        return new ApiResponse(true, "Role updated", result.Value);
     }
 }

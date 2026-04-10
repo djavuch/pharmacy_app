@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PharmacyApp.Application.DTOs.Admin.ProductCategory;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Domain.Entities;
 using PharmacyApp.Infrastructure.Data;
@@ -15,31 +14,31 @@ public class CategoryRepository : ICategoryRepository
         _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<CategoryModel>> GetAllAsync()
+    public async Task<IEnumerable<Category>> GetAllAsync()
     {
         return await _dbContext.Categories.AsNoTracking().ToListAsync();
     }
 
-    public async Task<CategoryModel?> GetByNameAsync(string categoryName)
+    public async Task<Category?> GetByNameAsync(string categoryName)
     {
         return await _dbContext.Categories
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.CategoryName == categoryName);
     }
 
-    public async Task<CategoryModel?> GetByIdAsync(int categoryId)
+    public async Task<Category?> GetByIdAsync(int categoryId)
     {
         return await _dbContext.Categories
             .FirstOrDefaultAsync(i => i.CategoryId == categoryId);
     }
 
-    public async Task<CategoryModel> AddAsync(CategoryModel category)
+    public async Task<Category> AddAsync(Category category)
     {
         await _dbContext.Categories.AddAsync(category);
         return category;
     }
 
-    public Task UpdateAsync(CategoryModel category)
+    public Task UpdateAsync(Category category)
     {
         _dbContext.Categories.Update(category);
         return Task.CompletedTask;

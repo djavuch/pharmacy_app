@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class ReviewConfiguration : IEntityTypeConfiguration<ReviewModel>
+public class ReviewConfiguration : IEntityTypeConfiguration<Review>
 {
-    public void Configure(EntityTypeBuilder<ReviewModel> builder)
+    public void Configure(EntityTypeBuilder<Review> builder)
     {
         builder.HasKey(r => r.Id);
         

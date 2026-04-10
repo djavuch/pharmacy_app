@@ -14,7 +14,7 @@ public class PromoCodeRepository : IPromoCodeRepository
         _dbContext = dbContext;
     }
 
-    public async Task<PromoCodeModel?> GetByIdAsync(Guid promoCodeId)
+    public async Task<PromoCode?> GetByIdAsync(Guid promoCodeId)
     {
         return await _dbContext.PromoCodes
             .Include(p => p.PromoCodeProducts)
@@ -23,7 +23,7 @@ public class PromoCodeRepository : IPromoCodeRepository
             .FirstOrDefaultAsync(p => p.PromoCodeId == promoCodeId);
     }
 
-    public async Task<PromoCodeModel?> GetByCodeAsync(string code)
+    public async Task<PromoCode?> GetByCodeAsync(string code)
     {
         return await _dbContext.PromoCodes
             .Include(p => p.PromoCodeProducts)
@@ -32,7 +32,7 @@ public class PromoCodeRepository : IPromoCodeRepository
             .FirstOrDefaultAsync(p => p.Code == code.ToUpper());
     }
 
-    public async Task<IEnumerable<PromoCodeModel>> GetAllAsync()
+    public async Task<IEnumerable<PromoCode>> GetAllAsync()
     {
         return await _dbContext.PromoCodes
             .Include(p => p.PromoCodeProducts)
@@ -40,7 +40,7 @@ public class PromoCodeRepository : IPromoCodeRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<PromoCodeModel>> GetActivePromoCodesAsync()
+    public async Task<IEnumerable<PromoCode>> GetActivePromoCodesAsync()
     {
         var now = DateTime.UtcNow;
         return await _dbContext.PromoCodes
@@ -50,13 +50,13 @@ public class PromoCodeRepository : IPromoCodeRepository
             .ToListAsync();
     }
 
-    public async Task<PromoCodeModel> AddAsync(PromoCodeModel promoCode)
+    public async Task<PromoCode> AddAsync(PromoCode promoCode)
     {
         await _dbContext.PromoCodes.AddAsync(promoCode);
         return promoCode;
     }
 
-    public Task UpdateAsync(PromoCodeModel promoCode)
+    public Task UpdateAsync(PromoCode promoCode)
     {
         _dbContext.PromoCodes.Update(promoCode);
         return Task.CompletedTask;
@@ -112,7 +112,7 @@ public class PromoCodeRepository : IPromoCodeRepository
             .ExecuteDeleteAsync();
     }
 
-    public async Task RecordUsageAsync(PromoCodeUsageModel usage)
+    public async Task RecordUsageAsync(PromoCodeUsage usage)
     {
         await _dbContext.PromoCodeUsages.AddAsync(usage);
     }

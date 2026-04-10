@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using PharmacyApp.Domain.Entities;
 using System.Text;
-using PharmacyApp.Application.DTOs.Email;
+using PharmacyApp.Application.Contracts.Notifications.Email;
 using PharmacyApp.Application.Interfaces.Email;
 
 namespace PharmacyApp.Infrastructure.Services.Email;
@@ -15,7 +15,7 @@ public class AccountNotificationSender : IAccountNotificationSender
         _emailSenderService = emailSenderService;
     }
 
-    public async Task SendEmailForRegisterConfirmationAsync(UserModel user, string token, 
+    public async Task SendEmailForRegisterConfirmationAsync(User user, string token, 
         string scheme, string host, CancellationToken ct)
     {
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
@@ -31,7 +31,7 @@ public class AccountNotificationSender : IAccountNotificationSender
         }, ct);
     }
 
-    public async Task SendEmailForResetPasswordAsync(UserModel user, string token, string scheme, 
+    public async Task SendEmailForResetPasswordAsync(User user, string token, string scheme, 
         string host, CancellationToken ct)
     {
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Abstractions;
 
 namespace PharmacyApp.Infrastructure.Services.BackgroundTasks;
 

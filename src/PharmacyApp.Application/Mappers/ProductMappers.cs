@@ -1,11 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.Product;
+﻿using PharmacyApp.Application.Contracts.Product;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class ProductMappers
 {
-    public static ProductDto ToProductDto(this ProductModel product, decimal? discountedPrice = null) => new()
+    public static ProductDto ToProductDto(this Product product, decimal? discountedPrice = null) => new()
     {
         Id = product.Id,
         Name = product.Name,

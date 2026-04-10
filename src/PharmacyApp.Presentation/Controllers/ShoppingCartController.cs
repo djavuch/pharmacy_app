@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using PharmacyApp.Application.DTOs.ShoppingCart;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Presentation.Helpers;
 using System.Security.Claims;
+using PharmacyApp.Application.Contracts.ShoppingCart;
 
 namespace PharmacyApp.Presentation.Controllers;
 
@@ -40,14 +39,15 @@ public class ShoppingCartController : ControllerBase
     public async Task<IActionResult> GetCart()
     {
         var (userId, sessionId) = GetUserIdentifiers();
-        var cart = await _shoppingCartService.GetCartAsync(userId, sessionId);
-        
+        var result = await _shoppingCartService.GetCartAsync(userId, sessionId);
+
         if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrEmpty(sessionId))
-        {
             SessionHelper.ClearSessionId(HttpContext);
-        }
-        
-        return Ok(cart);
+
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+
+        return Ok(result.Value);
     }
 
     [HttpPost]
@@ -61,12 +61,18 @@ public class ShoppingCartController : ControllerBase
             SessionHelper.ClearSessionId(HttpContext);
         }
         
-        return Ok(result);
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
 
-    [HttpPut("items/{productId}")]
-    public async Task<IActionResult> UpdateQuantity(UpdateCartDto updateCartDto)
+    [HttpPut("items/{productId:int}")]
+    public async Task<IActionResult> UpdateQuantity(int productId, UpdateCartDto updateCartDto)
     {
+        if (productId != updateCartDto.ProductId)
+            return BadRequest(new { message = "Product Id in URL does not match body." });
+        
         var (userId, sessionId) = GetUserIdentifiers();
         var result = await _shoppingCartService.UpdateCartItemAsync(userId, sessionId, updateCartDto);
         
@@ -75,19 +81,20 @@ public class ShoppingCartController : ControllerBase
             SessionHelper.ClearSessionId(HttpContext);
         }
         
-        return Ok(result);
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
 
-    [HttpDelete("items/{productId}")]
+    [HttpDelete("items/{productId:int}")]
     public async Task<IActionResult> RemoveItem(int productId)
     {
         var (userId, sessionId) = GetUserIdentifiers();
-        await _shoppingCartService.RemoveCartItemAsync(userId, sessionId, productId);
+        var result = await _shoppingCartService.RemoveCartItemAsync(userId, sessionId, productId);
         
-        if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrEmpty(sessionId))
-        {
-            SessionHelper.ClearSessionId(HttpContext);
-        }
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
         
         return NoContent();
     }
@@ -96,13 +103,10 @@ public class ShoppingCartController : ControllerBase
     public async Task<IActionResult> ClearCart()
     {
         var (userId, sessionId) = GetUserIdentifiers();
-        await _shoppingCartService.ClearCartAsync(userId, sessionId);
+        var result = await _shoppingCartService.ClearCartAsync(userId, sessionId);
         
-        
-        if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrEmpty(sessionId))
-        {
-            SessionHelper.ClearSessionId(HttpContext);
-        }
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
         
         return NoContent();
     }

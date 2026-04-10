@@ -1,11 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.Order;
+﻿using PharmacyApp.Application.Contracts.Order;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class OrderMappers
 {
-    public static OrderResponseDto ToOrderResponseDto(this OrderModel order) => new()
+    public static OrderDetailsDto ToOrderResponseDto(this Order order) => new()
     {
         Id = order.Id,
         BuyerFirstName = order.User.FirstName,
@@ -28,7 +28,7 @@ public static class OrderMappers
         BonusPointsEarned = order.BonusPointsEarned
     };
 
-    public static OrderAddressDto ToOrderAddressDto(this OrderAddressModel address) => new()
+    public static OrderAddressDto ToOrderAddressDto(this OrderAddress address) => new()
     {
         Street = address.Street,
         City = address.City,

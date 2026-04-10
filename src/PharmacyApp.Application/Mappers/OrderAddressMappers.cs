@@ -1,4 +1,4 @@
-﻿using PharmacyApp.Application.DTOs.Address;
+﻿using PharmacyApp.Application.Contracts.Address;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Mappers;
@@ -21,7 +21,7 @@ public static class OrderAddressMappers
             IsDefault = address.IsDefault
         };
     }
-    public static SavedAddressDto ToSavedAddressDto(this UserAddressModel address)
+    public static SavedAddressDto ToSavedAddressDto(this UserAddress address)
     {
         return new SavedAddressDto
         {
@@ -37,4 +37,12 @@ public static class OrderAddressMappers
             IsDefault = address.IsDefault
         };
     }
+    
+    public static OrderAddress ToOrderAddress(this AddressDetailsDto dto) =>
+        new(dto.Street, dto.ApartmentNumber, dto.City,
+            dto.State, dto.ZipCode, dto.Country, dto.AdditionalInfo);
+    
+    public static OrderAddress ToOrderAddress(this UserAddress address) =>
+        new(address.Street, address.ApartmentNumber, address.City,
+            address.State, address.ZipCode, address.Country, address.AdditionalInfo);
 }

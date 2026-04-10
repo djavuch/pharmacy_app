@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
-using PharmacyApp.Application.DTOs.User.UserProfileDto;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.User.Profile;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Presentation.Controllers;
@@ -17,7 +18,7 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
-    [HttpGet("my-profile")]
+    [HttpGet("me")]
     public async Task<IActionResult> GetMyProfile()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -27,17 +28,15 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
-        var userProfile = await _userService.GetCurrentUserProfileAsync(userId);
-
-        if (userProfile == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(userProfile);
+        var result = await _userService.GetCurrentUserProfileAsync(userId);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
     
-    [HttpPut("my-profile")]
+    [HttpPut("me")]
     public async Task<IActionResult> UpdateMyProfile(UpdateUserDto updateUserDto)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -47,19 +46,17 @@ public class UserController : ControllerBase
             throw new UnauthorizedException("You must be logged in to update your profile");
         }
         
-        if (updateUserDto.UserId != userId)
-        {
-            throw new ForbiddenException("You can only update your own profile");
-        }
-    
-        await _userService.UpdateUserProfileAsync(updateUserDto);
-    
+        var result = await _userService.UpdateUserProfileAsync(updateUserDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
     
 
-    [HttpGet("my-profile/orders")]
-    public async Task<IActionResult> GetMyOrders(int pageIndex = 1, int pageSize = 10)
+    [HttpGet("me/orders")]
+    public async Task<IActionResult> GetMyOrders([FromQuery] QueryParams query)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -68,13 +65,13 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
-        var orders = await _userService.GetUserOrdersAsync(userId, pageIndex, pageSize);
+        var orders = await _userService.GetUserOrdersAsync(userId, query);
 
         return Ok(orders);
     }
 
-    [HttpGet("my-profile/reviews")]
-    public async Task<IActionResult> GetMyReviews(int pageIndex = 1, int pageSize = 10)
+    [HttpGet("me/reviews")]
+    public async Task<IActionResult> GetMyReviews([FromQuery] ReviewQueryParams queryParams)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -83,7 +80,7 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
-        var reviews = await _userService.GetUserReviewsAsync(userId, pageIndex, pageSize);
+        var reviews = await _userService.GetUserReviewsAsync(userId, queryParams);
         return Ok(reviews);
     }
 }

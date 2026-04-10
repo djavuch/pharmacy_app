@@ -1,7 +1,8 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PharmacyApp.Application.DTOs.Admin.ProductCategory;
+using PharmacyApp.Application.Common.Pagination;
+using PharmacyApp.Application.Contracts.Category.Admin;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
@@ -26,9 +27,9 @@ public class AdminCategoryController : ControllerBase
     }
 
     [HttpGet("all-categories")]
-    public async Task<IActionResult> GetAllCategories(int pageIndex = 1, int pageSize = 10)
+    public async Task<IActionResult> GetAllCategories([FromQuery] QueryParams query)
     {
-        var categories = await _categoryService.GetAllCategoriesAsync(pageIndex, pageSize);
+        var categories = await _categoryService.GetAllCategoriesAsync(query);
         return Ok(categories);
     }
 
@@ -36,45 +37,41 @@ public class AdminCategoryController : ControllerBase
     public async Task<IActionResult> GetCategoryById(int categoryId)
     {
         var category = await _categoryService.GetCategoryByIdAsync(categoryId);
-        return Ok(category);
+        return category is null ? NotFound() : Ok(category);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateCategory(CreateCategoryDto createCategoryDto)
     {
-        var validationResult = await _createCategoryValidator.ValidateAsync(createCategoryDto);
-        if (!validationResult.IsValid)
-        {
-            throw new ValidationException(validationResult.Errors);
-        }
+        var result = await _categoryService.CreateCategoryAsync(createCategoryDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
 
-        var category = await _categoryService.CreateCategoryAsync(createCategoryDto);
-
-        return CreatedAtAction(
-            nameof(GetCategoryById),
-            new { categoryId = category.CategoryId },
-            category);
+        return CreatedAtAction(nameof(GetCategoryById), new { categoryId = result.Value!.CategoryId }, result.Value);
     }
 
     [HttpPut("{categoryId}")]
     public async Task<ActionResult> UpdateCategory([FromRoute] int categoryId, UpdateCategoryDto updateCategoryDto)
     {
         updateCategoryDto.CategoryId = categoryId;
-
-        var validationResult = await _updateCategoryValidator.ValidateAsync(updateCategoryDto);
-        if (!validationResult.IsValid)
-        {
-            throw new ValidationException(validationResult.Errors);
-        }
-
-        var category = await _categoryService.UpdateCategoryAsync(updateCategoryDto);
-        return Ok(category);
+        
+        var result = await _categoryService.UpdateCategoryAsync(updateCategoryDto);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
+        return Ok(result.Value);
     }
 
     [HttpDelete("{categoryId}")]
     public async Task<IActionResult> DeleteCategory(int categoryId)
     {
-        await _categoryService.DeleteCategoryAsync(categoryId);
+        var result = await _categoryService.DeleteCategoryAsync(categoryId);
+        
+        if (!result.IsSuccess)
+            return StatusCode(result.ErrorCode, new { message = result.Message });
+        
         return NoContent();
     }
 }

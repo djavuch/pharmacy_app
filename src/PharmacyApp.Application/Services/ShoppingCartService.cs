@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
-using PharmacyApp.Application.DTOs.ShoppingCart;
+using PharmacyApp.Application.Contracts.ShoppingCart;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
@@ -19,7 +21,7 @@ public class ShoppingCartService : IShoppingCartService
         _logger = logger;
     }
 
-    private async Task<ShoppingCartModel> GetOrCreateCartAsync(string? userId, string? sessionId)
+    private async Task<ShoppingCart> GetOrCreateCartAsync(string? userId, string? sessionId)
     {
         _logger.LogInformation("GetOrCreateCart - UserId: {UserId}, SessionId: {SessionId}",
             userId ?? "null", sessionId ?? "null");
@@ -31,13 +33,8 @@ public class ShoppingCartService : IShoppingCartService
             _logger.LogInformation("Creating new cart - UserId: {UserId}, SessionId: {SessionId}",
                 userId ?? "null", sessionId ?? "null");
 
-            cart = new ShoppingCartModel
-            {
-                UserId = userId,
-                SessionId = sessionId,
-                CreatedAt = DateTime.UtcNow,
-                Items = new List<CartItemModel>()
-            };
+            cart = new ShoppingCart(userId, sessionId);
+            
             await _unitOfWork.ShoppingCarts.AddAsync(cart);
             await _unitOfWork.SaveChangesAsync();
         }
@@ -50,64 +47,48 @@ public class ShoppingCartService : IShoppingCartService
         return cart;
     }
 
-    public async Task<CartDto> GetCartAsync(string? userId, string? sessionId)
+    public async Task<Result<CartDto>> GetCartAsync(string? userId, string? sessionId)
     {
         if (string.IsNullOrEmpty(userId) && string.IsNullOrEmpty(sessionId))
-        {
-            throw new ConflictException("Either userId or sessionId must be provided.");
-        }
+            return Result<CartDto>.Conflict("Either userId or sessionId must be provided.");
 
         var cart = await GetOrCreateCartAsync(userId, sessionId);
 
-        return cart.ToCartDto();
+        return Result<CartDto>.Success(cart.ToCartDto());
     }
 
-    public async Task<CartDto> AddToCartAsync(string? userId, string? sessionId, AddToCartDto addToCartDto)
+    public async Task<Result<CartDto>> AddToCartAsync(string? userId, string? sessionId, AddToCartDto addToCartDto)
     {
         if (string.IsNullOrEmpty(userId) && string.IsNullOrEmpty(sessionId))
-        {
-            throw new ConflictException("Either userId or sessionId must be provided.");
-        }
-
+            return Result<CartDto>.Conflict("Either userId or sessionId must be provided.");
+        
         _logger.LogInformation("AddToCart - ProductId: {ProductId}, Quantity: {Quantity}, UserId: {UserId}, SessionId: {SessionId}",
             addToCartDto.ProductId, addToCartDto.Quantity, userId ?? "null", sessionId ?? "null");
 
         var product = await _unitOfWork.Products.GetByIdAsync(addToCartDto.ProductId);
 
         if (product is null)
-        {
-            throw new NotFoundException("Product not found.");
-        }
+            return Result<CartDto>.NotFound("Product not found.");
 
         if (product.StockQuantity < addToCartDto.Quantity)
-        {
-            throw new ConflictException("Insufficient stock for the requested product.");
-        }
-
+            return Result<CartDto>.Conflict("Insufficient stock for the requested product.");
+        
         var cart = await GetOrCreateCartAsync(userId, sessionId);
 
         var existingItem = await _unitOfWork.ShoppingCarts.GetItemAsync(cart.Id, addToCartDto.ProductId);
 
         if (existingItem is not null)
         {
-            existingItem.Quantity += addToCartDto.Quantity;
+            existingItem.AddQuantity(addToCartDto.Quantity);
 
             if (existingItem.Quantity > product.StockQuantity)
-            {
-                throw new ConflictException($"Total quantity exceeds available stock: {product.StockQuantity}");
-            }
-
+                return Result<CartDto>.Conflict($"Total quantity exceeds available stock: {product.StockQuantity}");
+            
             await _unitOfWork.ShoppingCarts.UpdateItemAsync(existingItem);
         }
         else
         {
-            var newItem = new CartItemModel
-            {
-                ProductId = addToCartDto.ProductId,
-                Quantity = addToCartDto.Quantity,
-                PriceAtAdd = product.Price,
-                CartId = cart.Id
-            };
+            var newItem = new CartItem(cart.Id, addToCartDto.ProductId, addToCartDto.Quantity, product.Price);
 
             await _unitOfWork.ShoppingCarts.AddItemAsync(newItem);
         }
@@ -119,22 +100,18 @@ public class ShoppingCartService : IShoppingCartService
         return await GetCartAsync(userId, sessionId);
     }
 
-    public async Task<CartDto> UpdateCartItemAsync(string? userId, string? sessionId, UpdateCartDto updateCartDto)
+    public async Task<Result<CartDto>> UpdateCartItemAsync(string? userId, string? sessionId, UpdateCartDto updateCartDto)
     {
         var cart = await _unitOfWork.ShoppingCarts.GetByUserOrSessionAsync(userId, sessionId);
 
         if (cart is null)
-        {
-            throw new NotFoundException("Shopping cart not found.");
-        }
-
+            return Result<CartDto>.NotFound("Shopping cart not found.");
+        
         var cartItem = await _unitOfWork.ShoppingCarts.GetItemAsync(cart.Id, updateCartDto.ProductId);
 
         if (cartItem is null)
-        {
-            throw new NotFoundException($"Product with ID {updateCartDto.ProductId} not found in cart.");
-        }
-
+            return Result<CartDto>.NotFound($"Product with ID {updateCartDto.ProductId} not found in cart.");
+        
         if (updateCartDto.Quantity <= 0)
         {
             await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, updateCartDto.ProductId);
@@ -144,16 +121,12 @@ public class ShoppingCartService : IShoppingCartService
         var product = await _unitOfWork.Products.GetByIdAsync(updateCartDto.ProductId);
 
         if (product is null)
-        {
-            throw new NotFoundException($"Product with ID {updateCartDto.ProductId} not found");
-        }
+            return Result<CartDto>.NotFound($"Product with ID {updateCartDto.ProductId} not found");
 
         if (updateCartDto.Quantity > product.StockQuantity)
-        {
-            throw new ConflictException($"Requested quantity exceeds available stock: {product.StockQuantity}");
-        }
-
-        cartItem.Quantity = updateCartDto.Quantity;
+            return Result<CartDto>.Conflict($"Requested quantity exceeds available stock: {product.StockQuantity}");
+        
+        cartItem.SetQuantity(updateCartDto.Quantity);
         await _unitOfWork.ShoppingCarts.UpdateItemAsync(cartItem);
 
         cart.UpdateTimestamp();
@@ -163,36 +136,36 @@ public class ShoppingCartService : IShoppingCartService
         return await GetCartAsync(userId, sessionId);
     }
 
-    public async Task RemoveCartItemAsync(string? userId, string? sessionId, int productId)
+    public async Task<Result> RemoveCartItemAsync(string? userId, string? sessionId, int productId)
     {
         var cart = await _unitOfWork.ShoppingCarts.GetByUserOrSessionAsync(userId, sessionId);
 
         if (cart is null)
-        {
-            throw new NotFoundException("Shopping cart not found.");
-        }
-
+            return Result.NotFound("Shopping cart not found.");
+        
         await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, productId);
         cart.UpdateTimestamp();
 
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
         await _unitOfWork.SaveChangesAsync();
+        
+        return  Result.Success();
     }
 
-    public async Task ClearCartAsync(string? userId, string? sessionId)
+    public async Task<Result> ClearCartAsync(string? userId, string? sessionId)
     {
         var cart = await _unitOfWork.ShoppingCarts.GetByUserOrSessionAsync(userId, sessionId);
 
         if (cart is null)
-        {
-            throw new KeyNotFoundException("Shopping cart not found.");
-        }
+            return Result.NotFound("Shopping cart not found.");
 
         await _unitOfWork.ShoppingCarts.ClearAsync(cart.Id);
 
         cart.UpdateTimestamp();
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
         await _unitOfWork.SaveChangesAsync();
+        
+        return Result.Success();
     }
 
     public async Task MergeCartsOnLoginAsync(string sessionId, string userId)
@@ -240,13 +213,13 @@ public class ShoppingCartService : IShoppingCartService
         _logger.LogInformation("========== MERGE CARTS COMPLETED ==========");
     }
     
-public async Task MergeCartsOnLogoutAsync(string userId, string sessionId)
+public async Task<Result> MergeCartsOnLogoutAsync(string userId, string sessionId)
     {
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ConflictException("userId is required.");
+            return Result.NotFound("userId is required.");
     
         if (string.IsNullOrWhiteSpace(sessionId))
-            throw new ConflictException("sessionId is required.");
+            return Result.Conflict("sessionId is required.");
     
         _logger.LogInformation("========== COPY USER CART TO SESSION START ==========");
         _logger.LogInformation("COPY: UserId: {UserId}, SessionId: {SessionId}", userId, sessionId);
@@ -255,7 +228,7 @@ public async Task MergeCartsOnLogoutAsync(string userId, string sessionId)
         if (userCart is null || userCart.Items is null || userCart.Items.Count == 0)
         {
             _logger.LogInformation("COPY: User cart is empty or not found. Nothing to copy.");
-            return;
+            return Result.NotFound("User cart is empty or not found.");
         }
         
         var sessionCart = await GetOrCreateCartAsync(null, sessionId);
@@ -266,26 +239,22 @@ public async Task MergeCartsOnLogoutAsync(string userId, string sessionId)
     
             if (existingSessionItem is not null)
             {
-                existingSessionItem.Quantity += item.Quantity;
+                existingSessionItem.AddQuantity(item.Quantity);
                 await _unitOfWork.ShoppingCarts.UpdateItemAsync(existingSessionItem);
             }
             else
             {
-                await _unitOfWork.ShoppingCarts.AddItemAsync(new CartItemModel
-                {
-                    CartId = sessionCart.Id,
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    PriceAtAdd = item.PriceAtAdd
-                });
+                await _unitOfWork.ShoppingCarts.AddItemAsync(new CartItem(sessionCart.Id, 
+                    item.ProductId, item.Quantity, item.PriceAtAdd));
             }
         }
     
         sessionCart.UpdateTimestamp();
         await _unitOfWork.ShoppingCarts.UpdateAsync(sessionCart);
         await _unitOfWork.SaveChangesAsync();
-    
+        
         _logger.LogInformation("========== COPY USER CART TO SESSION COMPLETED ==========");
+        return Result.Success();
     }
 
     public async Task ClearCartByUserIdAsync(string userId)

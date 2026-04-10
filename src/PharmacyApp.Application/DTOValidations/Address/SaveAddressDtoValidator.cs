@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
-using PharmacyApp.Application.DTOs.Address;
-using PharmacyApp.Application.DTOValidations.Address;
+using PharmacyApp.Application.Contracts.Address;
+
+namespace PharmacyApp.Application.DTOValidations.Address;
 
 public class SaveAddressValidator : AbstractValidator<SaveAddressDto>
 {

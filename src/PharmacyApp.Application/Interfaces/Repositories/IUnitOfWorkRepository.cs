@@ -1,9 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+﻿using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
 using PharmacyApp.Application.Interfaces.RefreshTokens;
-using PharmacyApp.Application.Interfaces.Repositories;
-using System.Data;
 
-namespace PharmacyApp.Application.Interfaces;
+namespace PharmacyApp.Application.Interfaces.Repositories;
 
 public interface IUnitOfWorkRepository
 {

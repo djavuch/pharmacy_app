@@ -1,8 +1,12 @@
-﻿using PharmacyApp.Application.DTOs.Admin.Wishlist;
-using PharmacyApp.Application.DTOs.Wishlist;
+﻿using Microsoft.Extensions.Caching.Hybrid;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Contracts.Wishlist;
+using PharmacyApp.Application.Contracts.Wishlist.Admin;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
@@ -11,28 +15,32 @@ namespace PharmacyApp.Application.Services;
 public class WishlistService : IWishlistService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
-    public WishlistService(IUnitOfWorkRepository unitOfWork)
+    private readonly HybridCache _cache;
+    
+    public WishlistService(IUnitOfWorkRepository unitOfWork, HybridCache cache)
     {
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
     public async Task<List<WishlistDto>> GetWishlistByUserIdAsync(string userId)
     {
-        var wishlistItems = await _unitOfWork.Wishlists.GetByUserIdAsync(userId);
-
-        return wishlistItems.Select(w => w.ToWishlistDto()).ToList();
+        return await _cache.GetOrCreateAsync(CacheKeys.Users.Profile(1, userId), 
+            async _ =>
+        {
+            var items = await _unitOfWork.Wishlists.GetByUserIdAsync(userId);
+            return items.Select(w => w.ToWishlistDto()).ToList();
+        }, new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(10) });
     }
 
-    public async Task<WishlistDto> AddToWishlistAsync(WishlistDto wishlistDto, string userId)
+    public async Task<Result<WishlistDto>> AddToWishlistAsync(WishlistDto wishlistDto, string userId)
     {
         var existingItem = await _unitOfWork.Wishlists.IsProductInWishlistAsync(userId, wishlistDto.ProductId);
 
         if (existingItem)
-        {
-            throw new ConflictException("Product is already in the wishlist.");
-        }
+            return Result<WishlistDto>.Conflict("Product is already in the wishlist.");
 
-        var wishlistItem = new WishlistModel
+        var wishlistItem = new Wishlist
         {
             UserId = userId,
             ProductId = wishlistDto.ProductId
@@ -44,24 +52,24 @@ public class WishlistService : IWishlistService
         
         await _unitOfWork.SaveChangesAsync();
 
-        return addedWishlistItem.ToWishlistDto();
+        return Result<WishlistDto>.Success(addedWishlistItem.ToWishlistDto()) ;
     }
 
-    public async Task RemoveFromWishlistAsync(string userId, int productId)
+    public async Task<Result> RemoveFromWishlistAsync(string userId, int productId)
     {
         var wishlistItem = await _unitOfWork.Wishlists
             .IsProductInWishlistAsync(userId, productId);
 
         if (!wishlistItem)
-        {
-            throw new NotFoundException("Wishlist item", $"{userId}:{productId}"); 
-        }
-
+            return Result.NotFound("Product is not in the wishlist.");
+        
         await _unitOfWork.Wishlists.RemoveAsync(userId, productId);
         
         await _unitOfWork.Products.UpdateWishlistCountAsync(productId, -1);
         
         await _unitOfWork.SaveChangesAsync();
+        
+        return Result.Success();
     }
     
     // Admin specific

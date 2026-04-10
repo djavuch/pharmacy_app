@@ -4,17 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PharmacyApp.Application.Authorization.Requirements;
-using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Abstractions;
+using PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Application.Interfaces.RefreshTokens;
 using PharmacyApp.Application.Interfaces.Repositories;
+using PharmacyApp.Application.Interfaces.UserRoles;
 using PharmacyApp.Domain.Entities;
 using PharmacyApp.Infrastructure.Data;
-using PharmacyApp.Infrastructure.Repositories;
-using PharmacyApp.Application.Interfaces.UserRoles;
-using PharmacyApp.Infrastructure.Abstractions.Authentication;
 using PharmacyApp.Infrastructure.Extensions;
 using PharmacyApp.Infrastructure.Options;
+using PharmacyApp.Infrastructure.Repositories;
 using PharmacyApp.Infrastructure.Services.Authentication;
 using PharmacyApp.Infrastructure.Services.BackgroundTasks;
 using PharmacyApp.Infrastructure.Services.Email;
@@ -71,7 +71,7 @@ public static class DependencyInjection
            .SetApplicationName("PharmacyApp")
            .PersistKeysToFileSystem(new DirectoryInfo("/tmp/pharmacy-keys"));
 
-        services.AddIdentity<UserModel, IdentityRole>(options =>
+        services.AddIdentity<User, IdentityRole>(options =>
         {
             options.Password.RequireDigit = false;
             options.Password.RequireLowercase = false;

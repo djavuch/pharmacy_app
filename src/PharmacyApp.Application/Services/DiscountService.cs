@@ -1,7 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.Discount;
+﻿using Microsoft.Extensions.Caching.Hybrid;
+using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Contracts.Discount;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities.Discount;
 using PharmacyApp.Domain.Enums;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
@@ -11,121 +15,139 @@ namespace PharmacyApp.Application.Services;
 public class DiscountService : IDiscountService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
+    private readonly HybridCache _cache;
 
-    public DiscountService(IUnitOfWorkRepository unitOfWork)
+    public DiscountService(IUnitOfWorkRepository unitOfWork,  HybridCache cache)
     {
         _unitOfWork = unitOfWork;
+        _cache = cache;
     }
 
-    public async Task<DiscountDto> CreateDiscountAsync(CreateDiscountDto createDiscountDto)
+    public async Task<Result<DiscountDto>> CreateDiscountAsync(CreateDiscountDto createDiscountDto)
     {
         if (!Enum.TryParse<DiscountType>(createDiscountDto.DiscountType, ignoreCase: true, out var discountType))
-            throw new BadRequestException(
-                $"Invalid discount type: '{createDiscountDto.DiscountType}'. Valid values: {string.Join(", ", Enum.GetNames<DiscountType>())}.");
-
-        var discount = new DiscountModel
-        {
-            DiscountId = Guid.NewGuid(),
-            Name = createDiscountDto.Name,
-            Description = createDiscountDto.Description,
-            DiscountType = Enum.Parse<DiscountType>(createDiscountDto.DiscountType),
-            Value = createDiscountDto.Value,
-            StartDate = DateTime.SpecifyKind(createDiscountDto.StartDate, DateTimeKind.Utc),
-            EndDate = DateTime.SpecifyKind(createDiscountDto.EndDate, DateTimeKind.Utc),
-            IsActive = createDiscountDto.IsActive,
-            MinimumOrderAmount = createDiscountDto.MinimumOrderAmount,
-            MaximumOrderAmount = createDiscountDto.MaximumOrderAmount
-        };
-
-        discount.ValidateBusinessRules();
+            return Result<DiscountDto>.Conflict(
+                $"Invalid discount type: '{createDiscountDto.DiscountType}'. " +
+                $"Valid values: {string.Join(", ", Enum.GetNames<DiscountType>())}.");
+        
+        var discount = new Discount(createDiscountDto.Name, createDiscountDto.Description,
+            Enum.Parse<DiscountType>(createDiscountDto.DiscountType), createDiscountDto.Value,
+            DateTime.SpecifyKind(createDiscountDto.StartDate, DateTimeKind.Utc),
+            DateTime.SpecifyKind(createDiscountDto.EndDate, DateTimeKind.Utc),
+            createDiscountDto.MinimumOrderAmount, createDiscountDto.MaximumOrderAmount
+        );
 
         discount.ProductDiscounts = createDiscountDto.ProductIds
-            .Select(pid => new ProductDiscountModel { ProductId = pid, DiscountId = discount.DiscountId })
+            .Select(pid => new ProductDiscount { ProductId = pid, DiscountId = discount.DiscountId })
             .ToList();
 
         discount.CategoryDiscounts = createDiscountDto.CategoryIds
-            .Select(cid => new CategoryDiscountModel { CategoryId = cid, DiscountId = discount.DiscountId })
+            .Select(cid => new CategoryDiscount { CategoryId = cid, DiscountId = discount.DiscountId })
             .ToList();
 
         var createdDiscount = await _unitOfWork.Discounts.AddAsync(discount);
-        return createdDiscount.ToDiscountDto();
+        return Result<DiscountDto>.Success(createdDiscount.ToDiscountDto());
     }
 
     public async Task<DiscountDto?> GetDiscountByIdAsync(Guid discountId)
     {
-        var discount = await _unitOfWork.Discounts.GetByIdAsync(discountId);
-        return discount?.ToDiscountDto();
+        return await _cache.GetOrCreateAsync(
+            CacheKeys.Discounts.ById(discountId),
+            async _ =>
+            {
+                var discount = await _unitOfWork.Discounts.GetByIdAsync(discountId);
+                return discount?.ToDiscountDto();
+            });
     }
 
     public async Task<IEnumerable<DiscountDto>> GetAllDiscountsAsync()
     {
-        var discounts = await _unitOfWork.Discounts.GetAllAsync();
-        return discounts.Select(d => d.ToDiscountDto());
+        return await _cache.GetOrCreateAsync(
+            CacheKeys.Discounts.All,
+            async _ =>
+            {
+                var discounts = await _unitOfWork.Discounts.GetAllAsync();
+                return discounts.Select(d => d.ToDiscountDto()).ToList();
+            });
     }
 
     public async Task<IEnumerable<DiscountDto>> GetActiveDiscountsAsync()
     {
-        var discounts = await _unitOfWork.Discounts.GetActiveDiscountsAsync();
-        return discounts.Select(d => d.ToDiscountDto());
+        return await _cache.GetOrCreateAsync(
+            CacheKeys.Discounts.Active,
+            async _ =>
+            {
+                var discounts = await _unitOfWork.Discounts.GetActiveDiscountsAsync();
+                return discounts.Select(d => d.ToDiscountDto()).ToList();
+            });
     }
 
-    public async Task UpdateDiscountAsync(Guid discountId, UpdateDiscountDto updateDiscountDto)
+    public async Task<Result> UpdateDiscountAsync(Guid discountId, UpdateDiscountDto updateDiscountDto)
     {
         if (!Enum.TryParse<DiscountType>(updateDiscountDto.DiscountType, ignoreCase: true, out var discountType))
-            throw new BadRequestException(
+            return Result.Conflict(
                 $"Invalid discount type: '{updateDiscountDto.DiscountType}'. Valid values: {string.Join(", ", Enum.GetNames<DiscountType>())}.");
 
         var discount = await _unitOfWork.Discounts.GetByIdAsync(discountId);
 
         if (discount is null)
-        {
-            throw new NotFoundException("Discount not found");
-        }
-
-        discount.Name = updateDiscountDto.Name;
-        discount.Description = updateDiscountDto.Description;
-        discount.DiscountType = Enum.Parse<DiscountType>(updateDiscountDto.DiscountType);
-        discount.Value = updateDiscountDto.Value;
-        discount.StartDate = DateTime.SpecifyKind(updateDiscountDto.StartDate, DateTimeKind.Utc);
-        discount.EndDate = DateTime.SpecifyKind(updateDiscountDto.EndDate, DateTimeKind.Utc);
-        discount.IsActive = updateDiscountDto.IsActive;
-        discount.MinimumOrderAmount = updateDiscountDto.MinimumOrderAmount;
-        discount.MaximumOrderAmount = updateDiscountDto.MaximumOrderAmount;
-
-        discount.ValidateBusinessRules();
-
+            return Result.NotFound("Discount not found");
+        
+        discount.Update(updateDiscountDto.Name, updateDiscountDto.Description, 
+            discountType, updateDiscountDto.Value, 
+            DateTime.SpecifyKind(updateDiscountDto.StartDate, DateTimeKind.Utc),
+            DateTime.SpecifyKind(updateDiscountDto.EndDate, DateTimeKind.Utc), 
+            updateDiscountDto.MinimumOrderAmount, updateDiscountDto.MaximumOrderAmount);
+        
         discount.ProductDiscounts.Clear();
         foreach (var pid in updateDiscountDto.ProductIds)
         {
-            discount.ProductDiscounts.Add(new ProductDiscountModel { ProductId = pid, DiscountId = discountId });
+            discount.ProductDiscounts.Add(new ProductDiscount { ProductId = pid, DiscountId = discountId });
         }
 
         discount.CategoryDiscounts.Clear();
         foreach (int cid in updateDiscountDto.CategoryIds)
         {
-            discount.CategoryDiscounts.Add(new CategoryDiscountModel { CategoryId = cid, DiscountId = discountId });
+            discount.CategoryDiscounts.Add(new CategoryDiscount { CategoryId = cid, DiscountId = discountId });
         }
 
         await _unitOfWork.Discounts.UpdateAsync(discount);
         await _unitOfWork.SaveChangesAsync();
+        
+        await _cache.RemoveAsync(CacheKeys.Discounts.All);
+        await _cache.RemoveAsync(CacheKeys.Discounts.Active);
+        await _cache.RemoveAsync(CacheKeys.Discounts.ById(discountId));
+        
+        return Result.Success();
     }
 
-    public async Task DeleteDiscountAsync(Guid discountId)
+    public async Task<Result> DeleteDiscountAsync(Guid discountId)
     {
         var discount = await _unitOfWork.Discounts.GetByIdAsync(discountId);
 
         if (discount is null)
-        {
-            throw new NotFoundException($"Discount {discountId} not found.");
-        }
+            return Result.NotFound($"Discount {discountId} not found.");
 
         await _unitOfWork.Discounts.DeleteAsync(discountId);
+        
+        await _cache.RemoveAsync(CacheKeys.Discounts.All);
+        await _cache.RemoveAsync(CacheKeys.Discounts.Active);
+        await _cache.RemoveAsync(CacheKeys.Discounts.ById(discountId));
+        
+        return  Result.Success();
     }
 
     public async Task<decimal> CalculateDiscountedPriceAsync(int productId, int categoryId, decimal originalPrice)
     {
-        var productDiscounts = await _unitOfWork.Discounts.GetDiscountsByProductIdAsync(productId);
-        var categoryDiscounts = await _unitOfWork.Discounts.GetDiscountsByCategoryIdAsync(categoryId);
+        var productDiscounts = await _cache.GetOrCreateAsync(
+            CacheKeys.Discounts.ByProduct(productId), async _ =>
+                (await _unitOfWork.Discounts.GetDiscountsByProductIdAsync(productId)).ToList(),
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) });
+
+        var categoryDiscounts = await _cache.GetOrCreateAsync(
+            CacheKeys.Discounts.ByCategory(categoryId), async _ =>
+                (await _unitOfWork.Discounts.GetDiscountsByCategoryIdAsync(categoryId)).ToList(),
+            new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) });
 
         var activeDiscount = productDiscounts
             .Concat(categoryDiscounts)
@@ -144,7 +166,7 @@ public class DiscountService : IDiscountService
         return Math.Round(discountedPrice, 2);
     }
 
-    private decimal CalculateAmount(DiscountModel discount, decimal price)
+    private decimal CalculateAmount(Discount discount, decimal price)
     {
         var amount = discount.DiscountType == DiscountType.Percentage
             ? price * discount.Value / 100

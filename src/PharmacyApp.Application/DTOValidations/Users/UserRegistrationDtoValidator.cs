@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
-using PharmacyApp.Application.DTOs.User.AccountDto;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PharmacyApp.Application.Contracts.User.Account;
 
 namespace PharmacyApp.Application.DTOValidations.Users;
 

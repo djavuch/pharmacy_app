@@ -7,33 +7,33 @@ using PharmacyApp.Domain.Entities.PromoCode;
 using System.Reflection;
 
 namespace PharmacyApp.Infrastructure.Data;
-public class PharmacyAppDbContext : IdentityDbContext<UserModel>
+public class PharmacyAppDbContext : IdentityDbContext<User>
 {
     public PharmacyAppDbContext(DbContextOptions<PharmacyAppDbContext> options) : base(options)
     {
     }
 
-    public DbSet<ProductModel> Products { get; set; }
-    public DbSet<ShoppingCartModel> ShoppingCart { get; set; }
-    public DbSet<CartItemModel> CartItems { get; set; }
-    public DbSet<WishlistModel> Wishlists { get; set; }
-    public DbSet<CategoryModel> Categories { get; set; }
-    public DbSet<OrderModel> Orders { get; set; }
-    public DbSet<OrderItemModel> OrderItems { get; set; }
-    public DbSet<ReviewModel> Reviews { get; set; }
-    public DbSet<RefreshTokenModel> RefreshTokens { get; set; }
-    public DbSet<OrderAddressModel> OrderAddresses { get; set; }
-    public DbSet<DiscountModel> Discounts { get; set; }
-    public DbSet<ProductDiscountModel> ProductDiscounts { get; set; }
-    public DbSet<CategoryDiscountModel> CategoryDiscounts { get; set; }
-    public DbSet<UserAddressModel> UserAddresses { get; set; }
-    public DbSet<PromoCodeModel> PromoCodes { get; set; }
-    public DbSet<PromoCodeProductModel> PromoCodeProducts { get; set; }
-    public DbSet<PromoCodeCategoryModel> PromoCodeCategories { get; set; }
-    public DbSet<PromoCodeUsageModel> PromoCodeUsages { get; set; }
-    public DbSet<BonusAccountModel> BonusAccounts { get; set; }
-    public DbSet<BonusTransactionModel> BonusTransactions { get; set; }
-    public DbSet<BonusSettingsModel> BonusSettings { get; set; }
+    public DbSet<Product> Products { get; set; }
+    public DbSet<ShoppingCart> ShoppingCart { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
+    public DbSet<Wishlist> Wishlists { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderItem> OrderItems { get; set; }
+    public DbSet<Review> Reviews { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<OrderAddress> OrderAddresses { get; set; }
+    public DbSet<Discount> Discounts { get; set; }
+    public DbSet<ProductDiscount> ProductDiscounts { get; set; }
+    public DbSet<CategoryDiscount> CategoryDiscounts { get; set; }
+    public DbSet<UserAddress> UserAddresses { get; set; }
+    public DbSet<PromoCode> PromoCodes { get; set; }
+    public DbSet<PromoCodeProduct> PromoCodeProducts { get; set; }
+    public DbSet<PromoCodeCategory> PromoCodeCategories { get; set; }
+    public DbSet<PromoCodeUsage> PromoCodeUsages { get; set; }
+    public DbSet<BonusAccount> BonusAccounts { get; set; }
+    public DbSet<BonusTransaction> BonusTransactions { get; set; }
+    public DbSet<BonusSettings> BonusSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

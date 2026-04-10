@@ -1,17 +1,17 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 using PharmacyApp.Domain.Entities;
-using PharmacyApp.Infrastructure.Abstractions.Authentication;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Infrastructure.Services.Authentication;
 
 public class ClaimsService : IClaimsService
 {
-    private readonly UserManager<UserModel> _userManager;
+    private readonly UserManager<User> _userManager;
 
-    public ClaimsService(UserManager<UserModel> userManager)
+    public ClaimsService(UserManager<User> userManager)
     {
         _userManager = userManager;
     }

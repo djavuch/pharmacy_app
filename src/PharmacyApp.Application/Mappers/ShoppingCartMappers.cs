@@ -1,11 +1,11 @@
-﻿using PharmacyApp.Application.DTOs.ShoppingCart;
+﻿using PharmacyApp.Application.Contracts.ShoppingCart;
 using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static class ShoppingCartMappers
 {
-    public static CartDto ToCartDto(this ShoppingCartModel cart) => new()
+    public static CartDto ToCartDto(this ShoppingCart cart) => new()
     {
         Id = cart.Id,
         UserId = cart.UserId,

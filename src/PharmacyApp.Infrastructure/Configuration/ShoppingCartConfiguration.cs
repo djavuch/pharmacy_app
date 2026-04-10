@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities;
 
 namespace PharmacyApp.Infrastructure.Configuration;
 
-public class ShoppingCartConfiguration : IEntityTypeConfiguration<ShoppingCartModel>
+public class ShoppingCartConfiguration : IEntityTypeConfiguration<ShoppingCart>
 {
-    public void Configure(EntityTypeBuilder<ShoppingCartModel> builder)
+    public void Configure(EntityTypeBuilder<ShoppingCart> builder)
     {
         builder.ToTable("ShoppingCart", t =>
         {

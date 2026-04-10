@@ -1,9 +1,10 @@
-﻿using PharmacyApp.Application.DTOs.Address;
+﻿using PharmacyApp.Application.Contracts.Address;
 using PharmacyApp.Application.Interfaces;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
+using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities;
-using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
 namespace PharmacyApp.Application.Services;
 
@@ -37,53 +38,38 @@ public class UserAddressService : IUserAddressService
 
     public async Task<SavedAddressDto> CreateAddressAsync(SaveAddressDto saveAddressDto, string userId)
     {
-        var address = new UserAddressModel
-        {
-            UserId = userId,
-            Street = saveAddressDto.Street,
-            ApartmentNumber = saveAddressDto.ApartmentNumber,
-            City = saveAddressDto.City,
-            State = saveAddressDto.State,
-            ZipCode = saveAddressDto.ZipCode,
-            Country = saveAddressDto.Country,
-            AdditionalInfo = saveAddressDto.AdditionalInfo,
-            Label = saveAddressDto.Label,
-            IsDefault = saveAddressDto.IsDefault,
-            CreatedAt = DateTime.UtcNow
-        };
+        var address = new UserAddress(userId, saveAddressDto.Street, saveAddressDto.ApartmentNumber, 
+            saveAddressDto.City, saveAddressDto.State,  saveAddressDto.ZipCode, saveAddressDto.Country, 
+            saveAddressDto.AdditionalInfo, saveAddressDto.Label, saveAddressDto.IsDefault);
 
-        var created = await _unitOfWork.UserAddresses.AddAsync(address);
+        await _unitOfWork.UserAddresses.AddAsync(address);
         await _unitOfWork.SaveChangesAsync();
 
         return address.ToSavedAddressDto();
     }
 
-    public async Task<SavedAddressDto> UpdateAddressAsync(int id, SaveAddressDto saveAddressDto, string userId)
+    public async Task<Result<SavedAddressDto>> UpdateAddressAsync(int id, SaveAddressDto saveAddressDto, string userId)
     {
         var address = await _unitOfWork.UserAddresses.GetByIdAsync(id);
 
         if (address is null)
-            throw new NotFoundException("Address not found");
+            return Result<SavedAddressDto>.NotFound("Address not found");
 
         if (address.UserId != userId)
-            throw new UnauthorizedException("You do not have permission to modify this address.");
+            return Result<SavedAddressDto>.Forbidden("You do not have permission to modify this address.");
 
-        address.Street = saveAddressDto.Street;
-        address.ApartmentNumber = saveAddressDto.ApartmentNumber;
-        address.City = saveAddressDto.City;
-        address.State = saveAddressDto.State;
-        address.ZipCode = saveAddressDto.ZipCode;
-        address.Country = saveAddressDto.Country;
-        address.AdditionalInfo = saveAddressDto.AdditionalInfo;
-        address.Label = saveAddressDto.Label;
-        address.IsDefault = saveAddressDto.IsDefault;
+        address.Update(
+            saveAddressDto.Street, saveAddressDto.ApartmentNumber,
+            saveAddressDto.City, saveAddressDto.State, saveAddressDto.ZipCode,
+            saveAddressDto.Country,  saveAddressDto.AdditionalInfo, 
+            saveAddressDto.Label, saveAddressDto.IsDefault);
 
         if (saveAddressDto.IsDefault)
         {
             var others = await _unitOfWork.UserAddresses.GetByUserIdAsync(userId);
             foreach (var other in others.Where(a => a.Id != id && a.IsDefault))
             {
-                other.IsDefault = false;
+                other.UnsetDefault();
                 await _unitOfWork.UserAddresses.UpdateAsync(other);
             }
         }
@@ -91,49 +77,38 @@ public class UserAddressService : IUserAddressService
         await _unitOfWork.UserAddresses.UpdateAsync(address);
         await _unitOfWork.SaveChangesAsync();
 
-        return saveAddressDto.ToSavedAddressDto(id);
+        return Result<SavedAddressDto>.Success(saveAddressDto.ToSavedAddressDto(id));
     }
 
-    public async Task DeleteAddressAsync(int id, string userId)
+    public async Task<Result> DeleteAddressAsync(int id, string userId)
     {
         var address = await _unitOfWork.UserAddresses.GetByIdAsync(id);
 
         if (address is null)
-        {
-            throw new KeyNotFoundException($"Address not found");
-        }
+            return Result.NotFound($"Address not found");
 
         if (address.UserId != userId)
-        {
-            throw new UnauthorizedException("You do not have permission to delete this address.");
-        }
-
+            return Result.Forbidden("You do not have permission to delete this address.");
+        
         await _unitOfWork.UserAddresses.DeleteAsync(id);
         await _unitOfWork.SaveChangesAsync();
+        
+        return  Result.Success();
     }
 
-    public async Task SetDefaultAddressAsync(int id, string userId)
+    public async Task<Result> SetDefaultAddressAsync(int id, string userId)
     {
         var address = await _unitOfWork.UserAddresses.GetByIdAsync(id);
 
         if (address is null)
-        {
-            throw new NotFoundException($"Address not found");
-        }
+            return Result.NotFound("Address not found");
 
         if (address.UserId != userId)
-        {
-            throw new UnauthorizedAccessException();
-        }
+            return Result.Forbidden("You do not have permission to modify this address.");
 
-        var allAddresses = await _unitOfWork.UserAddresses.GetByUserIdAsync(userId);
-
-        foreach (var addr in allAddresses)
-        {
-            addr.IsDefault = addr.Id == id;
-            await _unitOfWork.UserAddresses.UpdateAsync(addr);
-        }
-
+        await _unitOfWork.UserAddresses.SetDefaultAsync(id, userId); 
         await _unitOfWork.SaveChangesAsync();
+
+        return Result.Success();
     }
 }

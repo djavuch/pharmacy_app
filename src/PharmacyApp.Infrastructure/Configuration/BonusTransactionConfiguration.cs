@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities.Bonus;
 
 namespace PharmacyApp.Infrastructure.Data.Configurations;
 
-public class BonusTransactionConfiguration : IEntityTypeConfiguration<BonusTransactionModel>
+public class BonusTransactionConfiguration : IEntityTypeConfiguration<BonusTransaction>
 {
-    public void Configure(EntityTypeBuilder<BonusTransactionModel> builder)
+    public void Configure(EntityTypeBuilder<BonusTransaction> builder)
     {
         builder.HasKey(t => t.Id);
 

@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using PharmacyApp.Application.DTOs.User.UserProfileDto;
+using PharmacyApp.Application.Contracts.User.Profile;
 
 namespace PharmacyApp.Application.DTOValidations.Users;
 

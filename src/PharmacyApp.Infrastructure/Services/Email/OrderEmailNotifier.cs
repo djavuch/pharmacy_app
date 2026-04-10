@@ -1,7 +1,8 @@
 ﻿using System.Text;
-using PharmacyApp.Application.DTOs.Email;
+using PharmacyApp.Application.Contracts.Notifications.Email;
 using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Email;
+using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Domain.Entities;
 using static PharmacyApp.Domain.Exceptions.AppExceptions;
 
@@ -105,7 +106,7 @@ public class OrderEmailNotifier : IOrderEmailNotifier
         await _emailSenderService.SendEmailAsync(emailRequest);
     }
 
-    private string BuildOrderConfirmationEmailBody(OrderModel order)
+    private string BuildOrderConfirmationEmailBody(Order order)
     {
         var sb = new StringBuilder();
         sb.Append("<html><body>");
@@ -132,7 +133,7 @@ public class OrderEmailNotifier : IOrderEmailNotifier
         return sb.ToString();
     }
 
-    private string BuildOrderStatusUpdateEmailBody(OrderModel order, string newStatus)
+    private string BuildOrderStatusUpdateEmailBody(Order order, string newStatus)
     {
         var sb = new StringBuilder();
         sb.AppendLine("<html><body>");
@@ -147,7 +148,7 @@ public class OrderEmailNotifier : IOrderEmailNotifier
         return sb.ToString();
     }
 
-    private string BuildOrderCancellationEmailBody(OrderModel order)
+    private string BuildOrderCancellationEmailBody(Order order)
     {
         var sb = new StringBuilder();
         sb.AppendLine("<html><body style='font-family: Arial, sans-serif;'>");
@@ -165,7 +166,7 @@ public class OrderEmailNotifier : IOrderEmailNotifier
         return sb.ToString();
     }
 
-    private string BuildOrderCompositionChangeEmailBody(OrderModel order)
+    private string BuildOrderCompositionChangeEmailBody(Order order)
     {
         var sb = new StringBuilder();
         sb.AppendLine("<html><body style='font-family: Arial, sans-serif;'>");

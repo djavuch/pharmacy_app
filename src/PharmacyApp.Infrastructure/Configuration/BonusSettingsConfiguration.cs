@@ -4,9 +4,9 @@ using PharmacyApp.Domain.Entities.Bonus;
 
 namespace PharmacyApp.Infrastructure.Data.Configurations;
 
-public class BonusSettingsConfiguration : IEntityTypeConfiguration<BonusSettingsModel>
+public class BonusSettingsConfiguration : IEntityTypeConfiguration<BonusSettings>
 {
-    public void Configure(EntityTypeBuilder<BonusSettingsModel> builder)
+    public void Configure(EntityTypeBuilder<BonusSettings> builder)
     {
         builder.HasKey(s => s.Id);
 
@@ -15,7 +15,7 @@ public class BonusSettingsConfiguration : IEntityTypeConfiguration<BonusSettings
         builder.Property(s => s.MaxRedeemPercent).HasPrecision(5, 2);
 
         // first record with default values
-        builder.HasData(new BonusSettingsModel
+        builder.HasData(new BonusSettings
         {
             Id = 1,
             EarningRate = 1m,

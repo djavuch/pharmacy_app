@@ -4,7 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
-using PharmacyApp.Infrastructure.Abstractions.Authentication;
+using PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 using PharmacyApp.Infrastructure.Options;
 
 namespace PharmacyApp.Infrastructure.Services.Authentication;
