@@ -13,7 +13,6 @@ COPY ["src/PharmacyApp.WebApi/PharmacyApp.WebApi.csproj", "src/PharmacyApp.WebAp
 COPY ["src/PharmacyApp.Application/PharmacyApp.Application.csproj", "src/PharmacyApp.Application/"]
 COPY ["src/PharmacyApp.Domain/PharmacyApp.Domain.csproj", "src/PharmacyApp.Domain/"]
 COPY ["src/PharmacyApp.Infrastructure/PharmacyApp.Infrastructure.csproj", "src/PharmacyApp.Infrastructure/"]
-COPY ["src/PharmacyApp.Presentation/PharmacyApp.Presentation.csproj", "src/PharmacyApp.Presentation/"]
 
 RUN dotnet restore "src/PharmacyApp.WebApi/PharmacyApp.WebApi.csproj"
 
