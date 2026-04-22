@@ -14,6 +14,11 @@ public class CategoryRepository : ICategoryRepository
         _dbContext = dbContext;
     }
 
+    public IQueryable<Category> Query()
+    {
+        return _dbContext.Categories.AsNoTracking();
+    }
+
     public async Task<IEnumerable<Category>> GetAllAsync()
     {
         return await _dbContext.Categories.AsNoTracking().ToListAsync();

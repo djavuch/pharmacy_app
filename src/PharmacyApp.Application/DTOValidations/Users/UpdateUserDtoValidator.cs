@@ -7,10 +7,6 @@ public class UpdateUserDtoValidator : AbstractValidator<UpdateUserDto>
 {
     public UpdateUserDtoValidator()
     {
-        RuleFor(x => x.UserId)
-            .NotEmpty()
-            .WithMessage("User ID is required");
-
         RuleFor(x => x.FirstName)
             .MaximumLength(50)
             .When(x => !string.IsNullOrEmpty(x.FirstName))
@@ -25,10 +21,5 @@ public class UpdateUserDtoValidator : AbstractValidator<UpdateUserDto>
             .Matches(@"^\+?[\d\s\-\(\)]+$")
             .When(x => !string.IsNullOrEmpty(x.PhoneNumber))
             .WithMessage("Invalid phone number format");
-
-        RuleFor(x => x.Address)
-            .MaximumLength(200)
-            .When(x => !string.IsNullOrEmpty(x.Address))
-            .WithMessage("Address cannot exceed 200 characters");
     }
 }

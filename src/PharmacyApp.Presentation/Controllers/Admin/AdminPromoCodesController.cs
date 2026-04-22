@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Contracts.PromoCode;
 using PharmacyApp.Application.Contracts.PromoCode.Results;
@@ -63,7 +63,7 @@ public class PromoCodeController : ControllerBase
         var result = await _promoCodeService.CreatePromoCodeAsync(createPromoCodeDtodto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return CreatedAtAction(nameof(GetById), new { id = result.Value!.PromoCodeId }, result.Value);
     }
@@ -74,7 +74,7 @@ public class PromoCodeController : ControllerBase
         var result = await _promoCodeService.UpdatePromoCodeAsync(id, updatePromoCodeDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }
@@ -85,7 +85,7 @@ public class PromoCodeController : ControllerBase
         var result = await _promoCodeService.DeletePromoCodeAsync(id);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }
@@ -109,7 +109,7 @@ public class PromoCodeController : ControllerBase
     {
         var result = await _promoCodeService.ActivatePromoCodeAsync(id);
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         return NoContent();
     }
 
@@ -118,7 +118,7 @@ public class PromoCodeController : ControllerBase
     {
         var result = await _promoCodeService.DeactivatePromoCodeAsync(id);
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         return NoContent();
     }
 }

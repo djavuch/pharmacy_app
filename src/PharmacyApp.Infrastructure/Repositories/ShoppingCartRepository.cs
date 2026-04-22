@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Domain.Entities;
@@ -37,12 +37,7 @@ public class ShoppingCartRepository : IShoppingCartRepository
     {
         if (!string.IsNullOrEmpty(userId))
         {
-            var userCart = await GetByUserIdAsync(userId);
-            if (userCart != null)
-                return userCart;
-            
-            if (!string.IsNullOrEmpty(sessionId))
-                return await GetBySessionIdAsync(sessionId);
+            return await GetByUserIdAsync(userId);
         }
 
         if (!string.IsNullOrEmpty(sessionId))
@@ -112,7 +107,40 @@ public class ShoppingCartRepository : IShoppingCartRepository
         _logger.LogInformation("Session cart found - CartId: {CartId}, Items count: {ItemsCount}",
             sessionCart.Id, sessionCart.Items.Count);
 
+        if (!string.IsNullOrWhiteSpace(sessionCart.UserId))
+        {
+            if (!string.Equals(sessionCart.UserId, userId, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(
+                    "Skipping migration: session cart {CartId} already belongs to another user {SessionUserId}, target user {TargetUserId}",
+                    sessionCart.Id,
+                    sessionCart.UserId,
+                    userId);
+                return;
+            }
+
+            sessionCart.AssignToUser(userId);
+            _dbContext.ShoppingCart.Update(sessionCart);
+
+            _logger.LogInformation(
+                "Session cart {CartId} already belongs to user {UserId}. Detached from session and completed.",
+                sessionCart.Id,
+                userId);
+            return;
+        }
+
         var userCart = await GetByUserIdAsync(userId);
+
+        if (userCart is not null && userCart.Id == sessionCart.Id)
+        {
+            userCart.AssignToUser(userId);
+            _dbContext.ShoppingCart.Update(userCart);
+
+            _logger.LogInformation(
+                "Session cart and user cart are the same entity (CartId: {CartId}). Detached from session and completed.",
+                userCart.Id);
+            return;
+        }
 
         if (userCart == null)
         {
@@ -120,7 +148,6 @@ public class ShoppingCartRepository : IShoppingCartRepository
                 userId);
 
             sessionCart.AssignToUser(userId);
-            sessionCart.AssignToGuest(null);
             _dbContext.ShoppingCart.Update(sessionCart);
 
             _logger.LogInformation("Session cart converted to user cart - CartId: {CartId}, UserId: {UserId}",

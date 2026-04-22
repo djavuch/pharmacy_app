@@ -1,11 +1,14 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common;
 using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Common.Results;
 using PharmacyApp.Application.Contracts.Product;
+using PharmacyApp.Application.Interfaces.Abstractions;
 using PharmacyApp.Application.Interfaces.Services;
+using PharmacyApp.Infrastructure.Services.FileStorage;
 
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
@@ -17,12 +20,14 @@ public class AdminProductController : ControllerBase
 {
     private readonly IProductService _productService;
     private readonly IWishlistService _wishlistService;
+    private readonly IImageStorageService _imageStorageService;
 
     public AdminProductController(IProductService productService, 
-        IWishlistService wishlistService)
+        IWishlistService wishlistService, IImageStorageService imageStorageService)
     {
         _productService = productService;
         _wishlistService = wishlistService;
+        _imageStorageService = imageStorageService;
     }
 
     [HttpGet]
@@ -38,7 +43,7 @@ public class AdminProductController : ControllerBase
         var result = await _productService.GetProductByIdAsync(id);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -56,7 +61,7 @@ public class AdminProductController : ControllerBase
         var result = await _productService.AddProductAsync(createProductDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -67,7 +72,7 @@ public class AdminProductController : ControllerBase
         var result = await _productService.UpdateProductAsync(updateProductDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }
@@ -78,8 +83,23 @@ public class AdminProductController : ControllerBase
         var result = await _productService.DeleteProductAsync(id);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
+    }
+
+    [HttpPost("upload-image")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<ActionResult<UploadImageStorageResponseDto>> UploadProductImage(IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "File is required" });
+        
+        await using var stream = file.OpenReadStream();
+        
+        var imageUrl = await _imageStorageService.UploadImageAsync(stream, file.FileName, file.ContentType, cancellationToken);
+        
+        return Ok(new UploadImageStorageResponseDto(imageUrl));
     }
 }

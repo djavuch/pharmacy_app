@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Presentation.Helpers;
 using System.Security.Claims;
@@ -45,7 +45,7 @@ public class ShoppingCartController : ControllerBase
             SessionHelper.ClearSessionId(HttpContext);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
 
         return Ok(result.Value);
     }
@@ -62,8 +62,8 @@ public class ShoppingCartController : ControllerBase
         }
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
-        
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
+
         return Ok(result.Value);
     }
 
@@ -82,8 +82,8 @@ public class ShoppingCartController : ControllerBase
         }
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
-        
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
+
         return Ok(result.Value);
     }
 
@@ -94,8 +94,8 @@ public class ShoppingCartController : ControllerBase
         var result = await _shoppingCartService.RemoveCartItemAsync(userId, sessionId, productId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
-        
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
+
         return NoContent();
     }
 
@@ -106,8 +106,8 @@ public class ShoppingCartController : ControllerBase
         var result = await _shoppingCartService.ClearCartAsync(userId, sessionId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
-        
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
+
         return NoContent();
     }
 }

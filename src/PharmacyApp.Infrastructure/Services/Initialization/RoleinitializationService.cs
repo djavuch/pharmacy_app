@@ -107,18 +107,6 @@ public class RoleInitializationService : IRoleInitializationService
             }
         }
 
-        if (options.RequirePasswordReset)
-        {
-            user.IsPasswordReset = true;
-            user.UpdatedAt = DateTime.UtcNow;
-            var updateResult = await _userManager.UpdateAsync(user);
-            if (!updateResult.Succeeded)
-            {
-                throw new InvalidOperationException(
-                    $"Failed to set password reset flag for bootstrap admin: {FormatIdentityErrors(updateResult.Errors)}");
-            }
-        }
-
         _logger.LogInformation("Bootstrap admin is initialized.");
     }
 

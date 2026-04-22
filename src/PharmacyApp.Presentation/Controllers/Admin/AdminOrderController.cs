@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Common.Results;
@@ -35,7 +35,7 @@ public class AdminOrderController : ControllerBase
         var result = await _orderService.UpdateOrderAsync(orderId, updateOrderDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }
@@ -46,7 +46,7 @@ public class AdminOrderController : ControllerBase
         var result = await _orderService.UpdateOrderStatusAsync(orderId, updateOrderStatusDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();   
     }

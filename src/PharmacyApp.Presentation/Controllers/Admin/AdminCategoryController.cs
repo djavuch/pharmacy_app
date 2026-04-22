@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common.Pagination;
@@ -46,7 +46,7 @@ public class AdminCategoryController : ControllerBase
         var result = await _categoryService.CreateCategoryAsync(createCategoryDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
 
         return CreatedAtAction(nameof(GetCategoryById), new { categoryId = result.Value!.CategoryId }, result.Value);
     }
@@ -59,7 +59,7 @@ public class AdminCategoryController : ControllerBase
         var result = await _categoryService.UpdateCategoryAsync(updateCategoryDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -70,7 +70,7 @@ public class AdminCategoryController : ControllerBase
         var result = await _categoryService.DeleteCategoryAsync(categoryId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }

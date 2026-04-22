@@ -126,7 +126,7 @@ public class OrderService : IOrderService
 
                     if (cart is null || !cart.Items.Any())
                     {
-                        return Result<OrderDetailsDto>.Failure("Shopping cart is empty.", 400);
+                        return Result<OrderDetailsDto>.BadRequest("Shopping cart is empty.");
                     }
 
                     decimal subtotalAmount = 0;
@@ -172,7 +172,7 @@ public class OrderService : IOrderService
                     }
                     else
                     {
-                        return Result<OrderDetailsDto>.Failure("Shipping address must be provided.", 400);
+                        return Result<OrderDetailsDto>.BadRequest("Shipping address must be provided.");
                     }
 
                     var order = new Order(userId, shippingAddress);
@@ -187,7 +187,14 @@ public class OrderService : IOrderService
                         order.OrderItems.Add(new OrderItem(item.ProductId, product.Name, item.Quantity, product.Price));
 
                         subtotalAmount += product.Price * item.Quantity;
-                        await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
+                        var decreaseStockResult = await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
+
+                        if (!decreaseStockResult.IsSuccess)
+                        {
+                            return Result<OrderDetailsDto>.Failure(
+                                $"Failed to reserve stock for product with ID {item.ProductId}: {decreaseStockResult.Message}",
+                                decreaseStockResult.ErrorType);
+                        }
                     }
 
                     order.SetAmounts(subtotalAmount);
@@ -216,14 +223,18 @@ public class OrderService : IOrderService
                         }
                     }
 
-                    // Bonus points calculation (example: 1 point per $10 spent)
+                    // Save the order first to get a real order ID for bonus transactions.
+                    await _unitOfWork.Orders.AddAsync(order);
+                    await _unitOfWork.SaveChangesAsync();
+
+                    // Bonus redemption
                     if (createOrderDto.RedeemBonusPoints is > 0)
                     {
                         var pointsToRedeem = Math.Min(
                             createOrderDto.RedeemBonusPoints.Value,
                             order.TotalAmount);
 
-                        var bonusResult = await _bonusService.RedeemPointsAsync(userId, 0, pointsToRedeem);
+                        var bonusResult = await _bonusService.RedeemPointsAsync(userId, order.Id, pointsToRedeem);
 
                         if (!bonusResult.IsSuccess)
                             return Result<OrderDetailsDto>.BadRequest(bonusResult.Message);
@@ -232,10 +243,6 @@ public class OrderService : IOrderService
 
                         order.ApplyBonusRedemption(pointsToRedeem, bonusDiscount);
                     }
-
-                    // Save the order 
-                    await _unitOfWork.Orders.AddAsync(order);
-                    await _unitOfWork.SaveChangesAsync();
 
                     // Save the promo code usage only after the order is successfully created to avoid recording usage for failed orders
                     if (order.PromoCodeId.HasValue)
@@ -275,7 +282,7 @@ public class OrderService : IOrderService
                 retryCount++;
 
                 if (retryCount >= maxRetries)
-                    return Result<OrderDetailsDto>.Failure("Unable to complete the order due to concurrent updates. Please try again.", 409);
+                    return Result<OrderDetailsDto>.Conflict("Unable to complete the order due to concurrent updates. Please try again.");
                 
                 // Small delay before retrying to reduce contention
                 await Task.Delay(100 * retryCount);
@@ -284,7 +291,7 @@ public class OrderService : IOrderService
                 continue;
             }
         }
-        return Result<OrderDetailsDto>.Failure("Order creation failed after multiple retries.", 409);
+        return Result<OrderDetailsDto>.Conflict("Order creation failed after multiple retries.");
     }
 
     public async Task<Result> UpdateOrderAsync(int orderId, UpdateOrderDto updateOrderDto)
@@ -308,7 +315,14 @@ public class OrderService : IOrderService
 
             foreach (var existingItem in order.OrderItems)
             {
-                await _productService.UpdateStockAsync(existingItem.ProductId, existingItem.Quantity);
+                var restoreStockResult = await _productService.UpdateStockAsync(existingItem.ProductId, existingItem.Quantity);
+
+                if (!restoreStockResult.IsSuccess)
+                {
+                    return Result.Failure(
+                        $"Failed to restore stock for product with ID {existingItem.ProductId}: {restoreStockResult.Message}",
+                        restoreStockResult.ErrorType);
+                }
             }
 
             order.OrderItems.Clear();
@@ -336,8 +350,15 @@ public class OrderService : IOrderService
                 newSubtotal += orderItem.Quantity * product.Price;
                 newProductIds.Add(orderItem.ProductId);
                 newCategoryIds.Add(product.CategoryId);
-                
-                await _productService.UpdateStockAsync(orderItem.ProductId, -orderItem.Quantity);
+
+                var decreaseStockResult = await _productService.UpdateStockAsync(orderItem.ProductId, -orderItem.Quantity);
+
+                if (!decreaseStockResult.IsSuccess)
+                {
+                    return Result.Failure(
+                        $"Failed to reserve stock for product with ID {orderItem.ProductId}: {decreaseStockResult.Message}",
+                        decreaseStockResult.ErrorType);
+                }
             }
 
             order.SetAmounts(newSubtotal);
@@ -414,7 +435,13 @@ public class OrderService : IOrderService
             if (order.OrderStatus != OrderStatus.Pending)
                 return Result.Conflict($"Only pending orders can be cancelled.");
 
-            await RestoreStockForOrderItemsAsync(order.OrderItems);
+            var restoreStockResult = await RestoreStockForOrderItemsAsync(order.OrderItems);
+
+            if (!restoreStockResult.IsSuccess)
+            {
+                return restoreStockResult;
+            }
+
             await RollbackPromoCodeUsageIfAnyAsync(order);
 
             await _bonusService.ReverseOrderBonusesAsync(order.UserId, order.Id);
@@ -459,15 +486,26 @@ public class OrderService : IOrderService
 
             var oldStatus = order.OrderStatus;
             var newStatus = updateOrderStatusDto.Status;
+
+            if (oldStatus == OrderStatus.Cancelled)
+                return Result.Conflict("Cancelled orders are final and their status cannot be changed.");
+
             if (oldStatus == newStatus) 
                 return Result.BadRequest($"Order already has status '{newStatus}'.");
 
             // Restore stock if order is being canceled
             if (newStatus == OrderStatus.Cancelled && oldStatus != OrderStatus.Cancelled)
             {
-                await RestoreStockForOrderItemsAsync(order.OrderItems);
+                var restoreStockResult = await RestoreStockForOrderItemsAsync(order.OrderItems);
+
+                if (!restoreStockResult.IsSuccess)
+                {
+                    return restoreStockResult;
+                }
+
                 // Rollback promo code usage
                 await RollbackPromoCodeUsageIfAnyAsync(order);
+                await _bonusService.ReverseOrderBonusesAsync(order.UserId, order.Id);
             }
             
             order.ChangeStatus(newStatus);
@@ -493,15 +531,24 @@ public class OrderService : IOrderService
     }
     
     // Specific methods for optimize queries
-    private async Task RestoreStockForOrderItemsAsync(IReadOnlyCollection<OrderItem> orderItems)
+    private async Task<Result> RestoreStockForOrderItemsAsync(IReadOnlyCollection<OrderItem> orderItems)
     {
         if (orderItems.Count == 0)
-            return;
-        
+            return Result.Success();
+
         foreach (var item in orderItems)
         {
-            await _productService.UpdateStockAsync(item.ProductId, item.Quantity);
+            var restoreStockResult = await _productService.UpdateStockAsync(item.ProductId, item.Quantity);
+
+            if (!restoreStockResult.IsSuccess)
+            {
+                return Result.Failure(
+                    $"Failed to restore stock for product with ID {item.ProductId}: {restoreStockResult.Message}",
+                    restoreStockResult.ErrorType);
+            }
         }
+
+        return Result.Success();
     }
 
     private async Task RollbackPromoCodeUsageIfAnyAsync(Order order)

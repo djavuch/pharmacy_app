@@ -27,17 +27,44 @@ public class CategoryService : ICategoryService
     public async Task<PaginatedList<CategoryDto>> GetAllCategoriesAsync(QueryParams query)
     {
         return await _cache.GetOrCreateAsync(
-            CacheKeys.Categories.All(query.PageIndex, query.PageSize),
+            CacheKeys.Categories.All(query),
             async _ =>
             {
-                var categories = await _unitOfWork.Categories.GetAllAsync();
-                
-                var totalCount = categories.Count();
-                
-                var items =  categories
+                var categoriesQuery = _unitOfWork.Categories.Query();
+
+                if (!string.IsNullOrWhiteSpace(query.FilterOn) && !string.IsNullOrWhiteSpace(query.FilterQuery))
+                {
+                    var filterOn = query.FilterOn.ToLower();
+                    var filterQuery = query.FilterQuery.ToLower();
+
+                    categoriesQuery = filterOn switch
+                    {
+                        "name" or "categoryname" => categoriesQuery
+                            .Where(c => c.CategoryName.ToLower().Contains(filterQuery)),
+                        "description" or "categorydescription" => categoriesQuery
+                            .Where(c => c.CategoryDescription.ToLower().Contains(filterQuery)),
+                        _ => categoriesQuery
+                    };
+                }
+
+                categoriesQuery = (query.SortBy?.ToLower()) switch
+                {
+                    "name" or "categoryname" => query.IsAscending
+                        ? categoriesQuery.OrderBy(c => c.CategoryName)
+                        : categoriesQuery.OrderByDescending(c => c.CategoryName),
+                    "description" or "categorydescription" => query.IsAscending
+                        ? categoriesQuery.OrderBy(c => c.CategoryDescription)
+                        : categoriesQuery.OrderByDescending(c => c.CategoryDescription),
+                    _ => categoriesQuery.OrderBy(c => c.CategoryId)
+                };
+
+                var totalCount = await categoriesQuery.CountAsync();
+
+                var items = await categoriesQuery
                     .Skip((query.PageIndex - 1) * query.PageSize)
                     .Take(query.PageSize)
-                    .Select(c => c.ToCategoryDto()).ToList();
+                    .Select(c => c.ToCategoryDto())
+                    .ToListAsync();
 
                 return PaginatedList<CategoryDto>.Create(items, totalCount, query);
             }
@@ -51,7 +78,7 @@ public class CategoryService : ICategoryService
             async _ =>
             {
                 var categoryById = await _unitOfWork.Categories.GetByIdAsync(categoryId);
-                return categoryById.ToCategoryDto();
+                return categoryById is null ? null : categoryById.ToCategoryDto();
             }
         );
     }

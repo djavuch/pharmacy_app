@@ -9,6 +9,13 @@ public record UserOrderSummaryDto
     public DateTime OrderDate { get; set; }
     public decimal TotalAmount { get; set; }
     public OrderStatus OrderStatus { get; set; }
+
+    public OrderAddressDto? ShippingAddress { get; set; }
+    public string? AppliedPromoCode { get; set; }
+    public decimal PromoCodeDiscountAmount { get; set; }
+    public decimal BonusPointsRedeemed { get; set; }
+    public decimal BonusPointsEarned { get; set; }
+
     public int ItemsCount => OrderItems?.Count ?? 0;
-    public List<OrderItemResponseDto> OrderItems { get; set; }
+    public List<OrderItemResponseDto> OrderItems { get; set; } = [];
 }

@@ -52,7 +52,7 @@ public class PromoCodeService : IPromoCodeService
     public async Task<PromoCodeDto?> GetPromoCodeByIdAsync(Guid promoCodeId)
     {
         return await _cache.GetOrCreateAsync(
-            CacheKeys.Discounts.ById(promoCodeId),
+            CacheKeys.PromoCodes.ById(promoCodeId),
             async _ =>
             {
                 var promoCode = await _unitOfWork.PromoCodes.GetByIdAsync(promoCodeId);
@@ -99,7 +99,7 @@ public class PromoCodeService : IPromoCodeService
         // Check if the new code (if changed) is unique
         var codeExists = await _unitOfWork.PromoCodes.CodeExistsAsync(updatePromoCodeDto.Code.ToUpper(), promoCodeId);
         if (codeExists)
-            return Result.Failure($"Promo code '{updatePromoCodeDto.Code}' already exists.", 409);
+            return Result.Conflict($"Promo code '{updatePromoCodeDto.Code}' already exists.");
         
         promoCode.Update(updatePromoCodeDto.Code.ToUpper(), updatePromoCodeDto.Description, discountType,
             updatePromoCodeDto.Value, updatePromoCodeDto.StartDate, updatePromoCodeDto.EndDate, updatePromoCodeDto.ApplicableToAllProducts,

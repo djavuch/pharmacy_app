@@ -10,7 +10,9 @@ public static class CacheKeys
         
         public const string AllPrefix = $"{Base}:all";
 
-        public static string All(int pageIndex, int pageSize) => $"{AllPrefix}:{pageIndex}:{pageSize}";
+        public static string All(QueryParams query)
+            => $"{AllPrefix}:{query.PageIndex}:{query.PageSize}:{query.FilterOn}" +
+               $":{query.FilterQuery}:{query.SortBy}:{query.IsAscending}";
 
         public static string ById(int id) => $"{Base}:id:{id}";
 
@@ -22,7 +24,8 @@ public static class CacheKeys
         private const string Base = "products";
         
         public static string All(int version, QueryParams q)
-            => $"{Base}_v{version}_{q.PageIndex}_{q.PageSize}_{q.FilterOn}_{q.FilterQuery}_{q.SortBy}_{q.IsAscending}";
+            => $"{Base}_v{version}_{q.PageIndex}_{q.PageSize}_{q.FilterOn}_{q.FilterQuery}" +
+               $"_{q.SortBy}_{q.IsAscending}_{q.CategoryName}_{q.SaleOnly}";
 
         public static string ById(int version, int id)
             => $"{Base}_v{version}:id:{id}";
@@ -42,7 +45,8 @@ public static class CacheKeys
             => $"{BaseSingle}_v{version}:reviews:{userId}:{q.PageIndex}:{q.PageSize}";
         
         public static string AllPaged(int version, QueryParams q)
-            => $"{BaseList}_v{version}:all:{q.PageIndex}:{q.PageSize}:{q.FilterOn}:{q.FilterQuery}:{q.SortBy}:{q.IsAscending}";
+            => $"{BaseList}_v{version}:all:{q.PageIndex}:{q.PageSize}:{q.FilterOn}" +
+               $":{q.FilterQuery}:{q.SortBy}:{q.IsAscending}";
     }
 
     public static class Discounts
@@ -51,12 +55,9 @@ public static class CacheKeys
         
         public const string All = $"{Base}:all";
         public static string Active => $"{Base}:active";
+        public static string ActiveEntities => $"{Base}:active:entities";
 
         public static string ById(Guid id) => $"{Base}:id:{id}";
-        
-        public static string ByProduct(int productId) => $"{Base}:product:{productId}";
-        
-        public static string ByCategory(int categoryId) => $"{Base}:category:{categoryId}";
     }
 
     public static class PromoCodes
@@ -93,5 +94,6 @@ public static class CacheKeys
         private const string Base = "wishlists";
         
         public static string ByUser(string userId) => $"{Base}:user:{userId}";
+        public static string UsersByProduct(int productId) => $"{Base}:product:{productId}:users";
     }
 }

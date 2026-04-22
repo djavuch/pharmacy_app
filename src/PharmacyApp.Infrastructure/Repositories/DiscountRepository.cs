@@ -49,15 +49,14 @@ public class DiscountRepository : IDiscountRepository
 
     public async Task<Discount> AddAsync(Discount discount)
     {
-        _dbContext.Discounts.Add(discount);
-        await _dbContext.SaveChangesAsync();
+        await _dbContext.Discounts.AddAsync(discount);
         return discount;
     }
 
-    public async Task UpdateAsync(Discount discount)
+    public Task UpdateAsync(Discount discount)
     {
         _dbContext.Discounts.Update(discount);
-        await _dbContext.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
     public async Task DeleteAsync(Guid discountId)
@@ -66,7 +65,6 @@ public class DiscountRepository : IDiscountRepository
         if (discount != null)
         {
             _dbContext.Discounts.Remove(discount);
-            await _dbContext.SaveChangesAsync();
         }
     }
 

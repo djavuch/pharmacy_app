@@ -40,7 +40,7 @@ public class UserAddressService : IUserAddressService
     {
         var address = new UserAddress(userId, saveAddressDto.Street, saveAddressDto.ApartmentNumber, 
             saveAddressDto.City, saveAddressDto.State,  saveAddressDto.ZipCode, saveAddressDto.Country, 
-            saveAddressDto.AdditionalInfo, saveAddressDto.Label, saveAddressDto.IsDefault);
+            saveAddressDto.Label, saveAddressDto.AdditionalInfo, saveAddressDto.IsDefault);
 
         await _unitOfWork.UserAddresses.AddAsync(address);
         await _unitOfWork.SaveChangesAsync();
@@ -61,8 +61,8 @@ public class UserAddressService : IUserAddressService
         address.Update(
             saveAddressDto.Street, saveAddressDto.ApartmentNumber,
             saveAddressDto.City, saveAddressDto.State, saveAddressDto.ZipCode,
-            saveAddressDto.Country,  saveAddressDto.AdditionalInfo, 
-            saveAddressDto.Label, saveAddressDto.IsDefault);
+            saveAddressDto.Country,  saveAddressDto.Label,
+            saveAddressDto.AdditionalInfo, saveAddressDto.IsDefault);
 
         if (saveAddressDto.IsDefault)
         {

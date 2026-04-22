@@ -18,6 +18,7 @@ using PharmacyApp.Infrastructure.Repositories;
 using PharmacyApp.Infrastructure.Services.Authentication;
 using PharmacyApp.Infrastructure.Services.BackgroundTasks;
 using PharmacyApp.Infrastructure.Services.Email;
+using PharmacyApp.Infrastructure.Services.FileStorage;
 using PharmacyApp.Infrastructure.Services.Initialization;
 
 namespace PharmacyApp.Infrastructure;
@@ -39,7 +40,9 @@ public static class DependencyInjection
 
         services.Configure<EmailOptions>(configuration.GetSection("EmailConfiguration"));
         services.Configure<AdminBootstrapOptions>(configuration.GetSection("AdminBootstrap"));
-
+        services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
+        services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
+        
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IDiscountRepository, DiscountRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
@@ -57,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
         services.AddScoped<IPromoCodeRepository, PromoCodeRepository>();
         services.AddScoped<IBonusRepository, BonusRepository>();
+        services.AddScoped<IContentPageRepository, ContentPageRepository>();
         services.AddScoped<IRoleInitializationService, RoleInitializationService>();
         services.AddScoped<IClaimsService, ClaimsService>();           
         services.AddScoped<IJwtTokenProvider, JwtTokenProvider>();
@@ -66,6 +70,8 @@ public static class DependencyInjection
         services.AddHostedService<QueueHostedService>();
 
         services.AddScoped<IJwtTokenProvider, JwtTokenProvider>();
+        
+        services.AddScoped<IImageStorageService, LocalImageStorageService>();
 
         services.AddDataProtection()
            .SetApplicationName("PharmacyApp")
@@ -92,6 +98,8 @@ public static class DependencyInjection
            options.TokenLifespan = TimeSpan.FromHours(2));
 
         services.AddJwtAuthentication(configuration);
+        
+        services.AddHttpContextAccessor();
 
         services.AddAuthorization(options =>
         {

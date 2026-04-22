@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
@@ -23,7 +23,7 @@ public class ReviewController : ControllerBase
         var result = await _reviewService.GetByIdAsync(id);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         if (result.Value!.ProductId != productId)
             return BadRequest("Review does not belong to this product.");
@@ -32,7 +32,7 @@ public class ReviewController : ControllerBase
     }
 
     [HttpGet("all-reviews")]
-    public async Task<IActionResult> GetAllReviews(int productId, ReviewQueryParams queryParams)
+    public async Task<IActionResult> GetAllReviews(int productId, [FromQuery] ReviewQueryParams queryParams)
     {
         var reviews = await _reviewService.GetReviewsByProductIdAsync(productId, queryParams);
         return Ok(reviews);
@@ -57,7 +57,7 @@ public class ReviewController : ControllerBase
         var result = await _reviewService.AddReviewAsync(reviewDto, userId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return CreatedAtAction(nameof(GetReview), new { productId, id = result.Value!.Id }, result.Value);
     }

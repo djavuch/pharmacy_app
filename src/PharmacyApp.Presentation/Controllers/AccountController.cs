@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Presentation.Helpers;
 using System.Security.Claims;
@@ -14,32 +15,44 @@ public class AccountController : ControllerBase
 {
     private readonly IAuthService _userService;
     private readonly IShoppingCartService _shoppingCartService;
+    private readonly IConfiguration _configuration;
     
     public AccountController(IAuthService userService,
-        IShoppingCartService shoppingCartService)
+        IShoppingCartService shoppingCartService,
+        IConfiguration configuration)
     {
         _userService = userService;
         _shoppingCartService = shoppingCartService;
+        _configuration = configuration;
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register(UserRegistrationDto userRegistrationDto)
     {
-        if (!Request.Host.HasValue)
+        if (!TryResolvePublicUrlComponents(out var scheme, out var host))
             return BadRequest(new { message = "Request host is required" });
         
-        var result = await _userService.UserRegisterAsync(userRegistrationDto, Request.Scheme, Request.Host.Value);
+        var result = await _userService.UserRegisterAsync(userRegistrationDto, scheme, host);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
 
         var sessionId = SessionHelper.TryGetSessionId(HttpContext);
+        var sessionOwnerUserId = SessionHelper.TryGetSessionOwnerUserId(HttpContext);
+        var registeredUserId = result.Value!.Id;
         
-        if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(result.Value!.Id))
+        if (!string.IsNullOrEmpty(sessionId) &&
+            !string.IsNullOrEmpty(registeredUserId) &&
+            CanMergeSessionCartWithUser(sessionOwnerUserId, registeredUserId, out var replaceExistingItems))
         {
-            await _shoppingCartService.MergeCartsOnLoginAsync(sessionId, result.Value.Id);
-            SessionHelper.ClearSessionId(HttpContext);         
+            await _shoppingCartService.MergeCartsOnLoginAsync(
+                sessionId,
+                registeredUserId,
+                replaceExistingItems);
         }
+
+        if (!string.IsNullOrEmpty(sessionId))
+            SessionHelper.ClearSessionId(HttpContext);
 
         return Ok(result.Value); 
     }
@@ -58,11 +71,6 @@ public class AccountController : ControllerBase
                     message = result.Message,
                     requiresEmailConfirmation = true
                 }),
-                LoginFailureReason.PasswordResetRequired => StatusCode(403, new
-                {
-                    message = result.Message,
-                    requiresPasswordReset = true
-                }),
                 LoginFailureReason.AccountLocked => StatusCode(403, new
                 {
                     message = result.Message,
@@ -73,12 +81,20 @@ public class AccountController : ControllerBase
         }
 
         var sessionId = SessionHelper.TryGetSessionId(HttpContext);
+        var sessionOwnerUserId = SessionHelper.TryGetSessionOwnerUserId(HttpContext);
 
-        if (!string.IsNullOrEmpty(sessionId) && !string.IsNullOrEmpty(result.UserId))
+        if (!string.IsNullOrEmpty(sessionId) &&
+            !string.IsNullOrEmpty(result.UserId) &&
+            CanMergeSessionCartWithUser(sessionOwnerUserId, result.UserId, out var replaceExistingItems))
         {
-            await _shoppingCartService.MergeCartsOnLoginAsync(sessionId, result.UserId);
-            SessionHelper.ClearSessionId(HttpContext);
+            await _shoppingCartService.MergeCartsOnLoginAsync(
+                sessionId,
+                result.UserId,
+                replaceExistingItems);
         }
+
+        if (!string.IsNullOrEmpty(sessionId))
+            SessionHelper.ClearSessionId(HttpContext);
 
         return Ok(new
         {
@@ -93,16 +109,13 @@ public class AccountController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.RefreshToken))
             return BadRequest(new { message = "Refresh token is required for logout." });
-        
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        
-        if (!string.IsNullOrEmpty(userId))
-        {
-            var sessionId = SessionHelper.GetOrCreateSessionId(HttpContext);
-            await _shoppingCartService.MergeCartsOnLogoutAsync(userId, sessionId);
-            
-            await _shoppingCartService.ClearCartByUserIdAsync(userId);
-        }
+
+        var sessionId = SessionHelper.TryGetSessionId(HttpContext);
+
+        if (!string.IsNullOrWhiteSpace(sessionId))
+            await _shoppingCartService.ClearCartAsync(null, sessionId);
+
+        SessionHelper.ClearSessionId(HttpContext);
         
         await _userService.LogoutAsync(request.RefreshToken);
         return Ok(new { message = "Logged out successfully." });
@@ -114,7 +127,7 @@ public class AccountController : ControllerBase
         var result = await _userService.ConfirmEmailAsync(userId, token);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
 
         return Ok(new { message = "Email confirmed successfully." });
     }
@@ -122,13 +135,13 @@ public class AccountController : ControllerBase
     [HttpPost("resend-confirmation")]
     public async Task<IActionResult> ResendConfirmationEmail([FromQuery] string email)
     {
-        if (!Request.Host.HasValue)
+        if (!TryResolvePublicUrlComponents(out var scheme, out var host))
             return BadRequest(new { message = "Request host is required" });
         
-        var result = await _userService.ResendConfirmationEmailAsync(email, Request.Scheme, Request.Host.Value);
+        var result = await _userService.ResendConfirmationEmailAsync(email, scheme, host);
 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(new { message = "If an account with that email exists, a confirmation link has been sent." });
     }
@@ -136,10 +149,10 @@ public class AccountController : ControllerBase
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
     {
-        if (!Request.Host.HasValue)
+        if (!TryResolvePublicUrlComponents(out var scheme, out var host))
             return BadRequest(new { message = "Request host is required" });
         
-        var result = await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, Request.Scheme, Request.Host.Value);
+        var result = await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, scheme, host);
         return Ok(new { message = result.Message });
     }
 
@@ -187,5 +200,50 @@ public class AccountController : ControllerBase
             return BadRequest(new { message = "Failed to change password." });
         
         return Ok(new { message = "Password changed successfully." });
+    }
+
+    private bool TryResolvePublicUrlComponents(out string scheme, out string host)
+    {
+        var frontendBaseUrl = _configuration["Frontend:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(frontendBaseUrl) &&
+            Uri.TryCreate(frontendBaseUrl, UriKind.Absolute, out var frontendUri))
+        {
+            scheme = frontendUri.Scheme;
+            host = frontendUri.IsDefaultPort ? frontendUri.Host : frontendUri.Authority;
+            return true;
+        }
+
+        if (Request.Host.HasValue)
+        {
+            scheme = Request.Scheme;
+            host = Request.Host.Value;
+            return true;
+        }
+
+        scheme = string.Empty;
+        host = string.Empty;
+        return false;
+    }
+
+    private static bool CanMergeSessionCartWithUser(
+        string? sessionOwnerUserId,
+        string userId,
+        out bool replaceExistingItems)
+    {
+        replaceExistingItems = false;
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return false;
+
+        if (string.IsNullOrWhiteSpace(sessionOwnerUserId))
+            return true;
+
+        if (string.Equals(sessionOwnerUserId, userId, StringComparison.OrdinalIgnoreCase))
+        {
+            replaceExistingItems = true;
+            return true;
+        }
+
+        return false;
     }
 }

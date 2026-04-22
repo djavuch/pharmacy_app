@@ -23,7 +23,8 @@ public class Discount
 
     public Discount(string name, string description, DiscountType discountType,
         decimal value, DateTime startDate, DateTime endDate,
-        decimal? minimumOrderAmount = null, decimal? maximumOrderAmount = null)
+        decimal? minimumOrderAmount = null, decimal? maximumOrderAmount = null,
+        bool isActive = true)
     {
         Name = name;
         Description = description;
@@ -33,14 +34,15 @@ public class Discount
         EndDate = endDate;
         MinimumOrderAmount = minimumOrderAmount;
         MaximumOrderAmount = maximumOrderAmount;
-        IsActive = true;
+        IsActive = isActive;
 
         ValidateBusinessRules();
     }
 
     public void Update(string name, string description, DiscountType discountType,
         decimal value, DateTime startDate, DateTime endDate,
-        decimal? minimumOrderAmount = null, decimal? maximumOrderAmount = null)
+        decimal? minimumOrderAmount = null, decimal? maximumOrderAmount = null,
+        bool isActive = true)
     {
         Name = name;
         Description = description;
@@ -50,6 +52,7 @@ public class Discount
         EndDate = endDate;
         MinimumOrderAmount = minimumOrderAmount;
         MaximumOrderAmount = maximumOrderAmount;
+        IsActive = isActive;
 
         ValidateBusinessRules();
     }

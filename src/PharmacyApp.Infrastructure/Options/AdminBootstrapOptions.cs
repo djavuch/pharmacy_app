@@ -7,5 +7,4 @@ public class AdminBootstrapOptions
     public string Password { get; set; } = string.Empty;
     public string FirstName { get; set; } = "System";
     public string LastName { get; set; } = "Admin";
-    public bool RequirePasswordReset { get; set; } = true;
 }

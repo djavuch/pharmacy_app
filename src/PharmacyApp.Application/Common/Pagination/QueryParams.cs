@@ -8,4 +8,6 @@ public record QueryParams
     public string? FilterQuery { get; init; }
     public string? SortBy      { get; init; }
     public bool IsAscending    { get; init; } = true;
+    public string? CategoryName  { get; init; }
+    public bool SaleOnly { get; init; } = false;
 }

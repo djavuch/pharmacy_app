@@ -25,12 +25,18 @@ public class WishlistService : IWishlistService
 
     public async Task<List<WishlistDto>> GetWishlistByUserIdAsync(string userId)
     {
-        return await _cache.GetOrCreateAsync(CacheKeys.Users.Profile(1, userId), 
+        return await _cache.GetOrCreateAsync(
+            CacheKeys.Wishlists.ByUser(userId),
             async _ =>
-        {
-            var items = await _unitOfWork.Wishlists.GetByUserIdAsync(userId);
-            return items.Select(w => w.ToWishlistDto()).ToList();
-        }, new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(10) });
+            {
+                var items = await _unitOfWork.Wishlists.GetByUserIdAsync(userId);
+                return items.Select(w => w.ToWishlistDto()).ToList();
+            },
+            new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(10),
+                LocalCacheExpiration = TimeSpan.FromMinutes(5)
+            });
     }
 
     public async Task<Result<WishlistDto>> AddToWishlistAsync(WishlistDto wishlistDto, string userId)
@@ -52,6 +58,9 @@ public class WishlistService : IWishlistService
         
         await _unitOfWork.SaveChangesAsync();
 
+        await _cache.RemoveAsync(CacheKeys.Wishlists.ByUser(userId));
+        await _cache.RemoveAsync(CacheKeys.Wishlists.UsersByProduct(wishlistDto.ProductId));
+
         return Result<WishlistDto>.Success(addedWishlistItem.ToWishlistDto()) ;
     }
 
@@ -68,6 +77,9 @@ public class WishlistService : IWishlistService
         await _unitOfWork.Products.UpdateWishlistCountAsync(productId, -1);
         
         await _unitOfWork.SaveChangesAsync();
+
+        await _cache.RemoveAsync(CacheKeys.Wishlists.ByUser(userId));
+        await _cache.RemoveAsync(CacheKeys.Wishlists.UsersByProduct(productId));
         
         return Result.Success();
     }
@@ -75,14 +87,24 @@ public class WishlistService : IWishlistService
     // Admin specific
     public async Task<List<WishlistUserDto>> GetUsersWhoAddedProductAsync(int productId)
     {
-        var wishlistItems = await _unitOfWork.Wishlists.GetUsersByProductIdAsync(productId);
-    
-        return wishlistItems.Select(w => new WishlistUserDto
-        {
-            UserId = w.UserId,
-            UserEmail = w.User.Email,
-            UserFullName = $"{w.User.FirstName} {w.User.LastName}",
-            DateAdded = w.DateAdded
-        }).ToList();
+        return await _cache.GetOrCreateAsync(
+            CacheKeys.Wishlists.UsersByProduct(productId),
+            async _ =>
+            {
+                var wishlistItems = await _unitOfWork.Wishlists.GetUsersByProductIdAsync(productId);
+
+                return wishlistItems.Select(w => new WishlistUserDto
+                {
+                    UserId = w.UserId,
+                    UserEmail = w.User.Email,
+                    UserFullName = $"{w.User.FirstName} {w.User.LastName}",
+                    DateAdded = w.DateAdded
+                }).ToList();
+            },
+            new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(10),
+                LocalCacheExpiration = TimeSpan.FromMinutes(5)
+            });
     }
 }

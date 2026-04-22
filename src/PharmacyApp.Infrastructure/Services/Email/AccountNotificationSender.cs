@@ -18,8 +18,20 @@ public class AccountNotificationSender : IAccountNotificationSender
     public async Task SendEmailForRegisterConfirmationAsync(User user, string token, 
         string scheme, string host, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            throw new InvalidOperationException("User email is required for confirmation email.");
+        }
+
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        var confirmationLink = $"{scheme}://{host}/account/confirm-email?userId={user.Id}&token={encodedToken}";
+        var baseUrl = $"{scheme}://{host}".TrimEnd('/');
+        var confirmationLink = QueryHelpers.AddQueryString(
+            $"{baseUrl}/confirm-email",
+            new Dictionary<string, string?>
+            {
+                ["userId"] = user.Id,
+                ["token"] = encodedToken
+            });
         var emailBody = $"<p>Please confirm your email by clicking this link: <a href='{confirmationLink}'>Confirm Email</a></p>";
 
         await _emailSenderService.SendEmailAsync(new EmailRequestDto
@@ -34,8 +46,20 @@ public class AccountNotificationSender : IAccountNotificationSender
     public async Task SendEmailForResetPasswordAsync(User user, string token, string scheme, 
         string host, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            throw new InvalidOperationException("User email is required for password reset email.");
+        }
+
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        var resetLink = $"{scheme}://{host}/reset-password-page?email={user.Email}&token={encodedToken}"; 
+        var baseUrl = $"{scheme}://{host}".TrimEnd('/');
+        var resetLink = QueryHelpers.AddQueryString(
+            $"{baseUrl}/reset-password",
+            new Dictionary<string, string?>
+            {
+                ["email"] = user.Email,
+                ["token"] = encodedToken
+            });
         var emailBody = $"<p>Please reset your password by clicking this link: <a href='{resetLink}'>Reset Password</a></p>";
 
         await _emailSenderService.SendEmailAsync(new EmailRequestDto

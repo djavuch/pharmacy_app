@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common;
 using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Common.Results;
@@ -31,13 +31,13 @@ public class ProductController : ControllerBase
         var result = await _productService.GetProductByIdAsync(id);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);;
     }
 
     [HttpGet("category/{categoryName}")]
-    public async Task<ActionResult<ApiResponse>> GetProductsByCategory(string categoryName, QueryParams query)
+    public async Task<ActionResult<ApiResponse>> GetProductsByCategory(string categoryName, [FromQuery] QueryParams query)
     {
         var categoryQuery = query with
         {

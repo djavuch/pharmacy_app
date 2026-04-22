@@ -9,6 +9,7 @@ using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Common;
 using PharmacyApp.Domain.Entities;
+using PharmacyApp.Domain.Enums;
 
 namespace PharmacyApp.Application.Services;
 
@@ -38,8 +39,7 @@ public class ReviewService : IReviewService
         return await _cache.GetOrCreateAsync(CacheKeys.Reviews.ByProduct(productId, query), async _ =>
         {
             var reviewsQuery = _unitOfWork.Reviews
-                .GetByProductId(productId)
-                .Where(r => r.IsApproved);
+                .GetApprovedByProductId(productId);
 
             return await PaginatedList<ProductReviewDto>.CreateAsync(
                 reviewsQuery.Select(r => new ProductReviewDto
@@ -64,7 +64,7 @@ public class ReviewService : IReviewService
         if (product is null)
             return Result<ProductReviewDto>.NotFound("Product not found.");
         
-        var review = new Review(userId, reviewDto.ProductId, reviewDto.Rating, reviewDto.Content);
+        var review = new Review(userId, reviewDto.ProductId, reviewDto.Rating, reviewDto.Content.Trim());
 
         await _unitOfWork.Reviews.AddAsync(review); 
         await _unitOfWork.SaveChangesAsync();
@@ -87,9 +87,9 @@ public class ReviewService : IReviewService
                 
             };
         }
-        if (queryParams.IsApproved.HasValue)
+        if (queryParams.Status.HasValue)
         {
-            reviewsQuery = reviewsQuery.Where(r => r.IsApproved == queryParams.IsApproved.Value);
+            reviewsQuery = reviewsQuery.Where(r => r.Status == queryParams.Status.Value);
         }
 
         reviewsQuery = queryParams.SortBy?.ToLowerInvariant() switch
@@ -111,7 +111,7 @@ public class ReviewService : IReviewService
                 UserName = r.User != null ? r.User.UserName : null,
                 Rating = r.Rating,
                 Content = r.Content,
-                IsApproved = r.IsApproved,
+                Status = r.Status,
                 CreatedAt = r.CreatedAt
             }),
             queryParams.PageIndex, queryParams.PageSize);
@@ -139,13 +139,9 @@ public class ReviewService : IReviewService
         {
             return false;
         }
+
         review.Reject();
         await _unitOfWork.SaveChangesAsync();
         return true;
-    }
-
-    public void DeleteReview(Review review)
-    {
-        _unitOfWork.Reviews.DeleteAsync(review);
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Contracts.Bonus.Admin;
 using PharmacyApp.Application.Interfaces.Services;
@@ -42,7 +42,7 @@ public class AdminBonusController : ControllerBase
     {
         var result = await _bonusService.AdminAdjustAsync(userId, dto);
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         return Ok(await _bonusService.GetOrCreateAccountAsync(userId));
     }
 

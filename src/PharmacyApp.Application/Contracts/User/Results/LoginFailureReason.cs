@@ -4,6 +4,5 @@ public enum LoginFailureReason
 {
     InvalidCredentials,
     EmailNotConfirmed,
-    PasswordResetRequired,
     AccountLocked
 }

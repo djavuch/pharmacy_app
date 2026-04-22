@@ -1,25 +1,27 @@
-﻿namespace PharmacyApp.Domain.Exceptions;
+using PharmacyApp.Domain.Common;
+
+namespace PharmacyApp.Domain.Exceptions;
 
 public abstract class AppExceptions : Exception
 {
-    public int StatusCode { get; }
+    public ErrorType ErrorType { get; }
     public string ErrorMessage { get; }
 
-    protected AppExceptions(string message, int statusCode, string errorMessage) : base(message)
+    protected AppExceptions(string message, ErrorType errorType, string errorMessage) : base(message)
     {
-        StatusCode = statusCode;
+        ErrorType = errorType;
         ErrorMessage = errorMessage;
     }
 
     public class NotFoundException : AppExceptions
     {
         public NotFoundException(string message)
-            : base(message, 404, "NOT_FOUND")
+            : base(message, ErrorType.NotFound, "NOT_FOUND")
         {
         }
 
         public NotFoundException(string entity, object key)
-            : base($"{entity} with id '{key}' was not found.", 404, "NOT_FOUND")
+            : base($"{entity} with id '{key}' was not found.", ErrorType.NotFound, "NOT_FOUND")
         {
         }
     }
@@ -27,7 +29,7 @@ public abstract class AppExceptions : Exception
     public class ConflictException : AppExceptions
     {
         public ConflictException(string message)
-            : base(message, 409, "CONFLICT")
+            : base(message, ErrorType.Conflict, "CONFLICT")
         {
         }
     }
@@ -35,7 +37,7 @@ public abstract class AppExceptions : Exception
     public class BadRequestException : AppExceptions
     {
         public BadRequestException(string message)
-            : base(message, 400, "BAD_REQUEST")
+            : base(message, ErrorType.Validation, "BAD_REQUEST")
         {
         }
     }
@@ -43,15 +45,15 @@ public abstract class AppExceptions : Exception
     public class UnauthorizedException : AppExceptions
     {
         public UnauthorizedException(string message)
-            : base(message, 401, "UNAUTHORIZED")
+            : base(message, ErrorType.Unauthorized, "UNAUTHORIZED")
         {
         }
     }
-    
+
     public sealed class AppException : AppExceptions
     {
         public AppException(string message)
-            : base(message, 422, "UNPROCESSABLE_ENTITY")
+            : base(message, ErrorType.UnprocessableEntity, "UNPROCESSABLE_ENTITY")
         {
         }
     }
@@ -59,7 +61,7 @@ public abstract class AppExceptions : Exception
     public class ForbiddenException : AppExceptions
     {
         public ForbiddenException(string message)
-            : base(message, 403, "FORBIDDEN")
+            : base(message, ErrorType.Forbidden, "FORBIDDEN")
         {
         }
     }

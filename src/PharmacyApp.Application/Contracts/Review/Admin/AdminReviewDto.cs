@@ -1,4 +1,6 @@
-﻿namespace PharmacyApp.Application.Contracts.Review.Admin;
+using PharmacyApp.Domain.Enums;
+
+namespace PharmacyApp.Application.Contracts.Review.Admin;
 
 public record AdminReviewDto
 {
@@ -10,5 +12,5 @@ public record AdminReviewDto
     public int Rating { get; set; }
     public string? Content { get; set; }
     public DateTime CreatedAt { get; set; }
-    public bool IsApproved { get; set; }
+    public ReviewStatus Status { get; set; }
 }

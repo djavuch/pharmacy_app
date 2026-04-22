@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Contracts.Discount;
 using PharmacyApp.Application.Interfaces.Services;
@@ -31,7 +31,7 @@ public class DiscountController : ControllerBase
         var discounts = await _discountService.GetActiveDiscountsAsync();
         return Ok(discounts);
     }
-    
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -48,7 +48,7 @@ public class DiscountController : ControllerBase
         var result = await _discountService.CreateDiscountAsync(сreateDiscountDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return CreatedAtAction(nameof(GetById), new { id = result.Value!.DiscountId }, result.Value);
     }
@@ -59,7 +59,7 @@ public class DiscountController : ControllerBase
         var result = await _discountService.UpdateDiscountAsync(id, updateDiscountDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }
@@ -70,7 +70,7 @@ public class DiscountController : ControllerBase
         var result = await _discountService.DeleteDiscountAsync(id);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }

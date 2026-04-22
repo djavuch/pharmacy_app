@@ -6,6 +6,7 @@ namespace PharmacyApp.Domain.Entities;
 public class Product
 {
     public int Id { get; private set; }
+    public string? ProductCode { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public decimal Price { get; private set; }
@@ -58,6 +59,14 @@ public class Product
             throw new ArgumentException($"Insufficient stock. Available: {StockQuantity}, requested change: {quantityChange}.");
 
         StockQuantity += quantityChange;
+    }
+
+    public void AssignProductCode(string productCode)
+    {
+        if (string.IsNullOrWhiteSpace(productCode))
+            throw new ArgumentException("Product code cannot be empty.");
+
+        ProductCode = productCode.Trim().ToUpperInvariant();
     }
 
     private void ValidateBusinessRules()

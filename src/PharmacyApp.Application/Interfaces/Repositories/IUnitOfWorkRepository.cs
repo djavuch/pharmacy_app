@@ -19,6 +19,7 @@ public interface IUnitOfWorkRepository
     IUserAddressRepository UserAddresses { get; }
     IPromoCodeRepository PromoCodes { get; }
     IBonusRepository Bonuses { get;  }
+    IContentPageRepository ContentPages { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 

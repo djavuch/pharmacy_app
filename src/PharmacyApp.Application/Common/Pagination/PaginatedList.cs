@@ -5,6 +5,7 @@ namespace PharmacyApp.Application.Common.Pagination;
 public record PaginatedList<T>
 {
     public List<T> Items { get; set; } = [];
+    public int TotalCount { get; set; }
     public int PageIndex { get; set; }
     public int TotalPages { get; set; }
     public int PageSize { get; set; }   
@@ -20,6 +21,7 @@ public record PaginatedList<T>
         return new PaginatedList<T>
         {
             Items = items,
+            TotalCount = count,
             PageIndex = pageIndex,
             PageSize = pageSize,
             TotalPages = (int)Math.Ceiling(count / (double)pageSize)
@@ -34,6 +36,7 @@ public record PaginatedList<T>
         => new()
         {
             Items = items,
+            TotalCount = totalCount,
             PageIndex = query.PageIndex,
             PageSize = query.PageSize,
             TotalPages = (int)Math.Ceiling(totalCount / (double)query.PageSize)

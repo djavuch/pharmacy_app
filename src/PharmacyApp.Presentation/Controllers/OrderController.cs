@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
@@ -37,7 +37,7 @@ public class OrderController : ControllerBase
         var result = await _orderService.GetOrderByIdAsync(id, userId, isStaff);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -54,7 +54,7 @@ public class OrderController : ControllerBase
         var result = await _orderService.CreateOrderAsync(createOrderDto, userId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return CreatedAtAction(nameof(GetOrder), new { id = result.Value!.Id }, result.Value);
     }
@@ -70,7 +70,7 @@ public class OrderController : ControllerBase
         var result = await _orderService.CancelOrderAsync(orderId, userId, isStaff);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }

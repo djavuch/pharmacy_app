@@ -4,7 +4,6 @@ using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Entities;
-using System.Collections.Concurrent;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
 using PharmacyApp.Application.Common;
@@ -20,7 +19,6 @@ public class ProductService : IProductService
     private readonly HybridCache _cache;
     private readonly IDiscountService _discountService;
     private readonly ILogger<ProductService> _logger;   
-    private static readonly ConcurrentDictionary<int, SemaphoreSlim> _productLocks = new();
     private static int _cacheVersion = 0;
 
     public ProductService(
@@ -62,6 +60,28 @@ public class ProductService : IProductService
                     };
                 }
 
+                if (!string.IsNullOrWhiteSpace(query.CategoryName))
+                {
+                    var normalizedCategoryName = query.CategoryName.Trim().ToLower();
+                    productsQuery = productsQuery.Where(p => p.Category.CategoryName.ToLower() == normalizedCategoryName);
+                }
+
+                if (query.SaleOnly)
+                {
+                    var now = DateTime.UtcNow;
+                    productsQuery = productsQuery.Where(p =>
+                        p.ProductDiscounts.Any(d => 
+                            d.Discount.IsActive && 
+                            d.Discount.StartDate <= now && 
+                            d.Discount.EndDate >= now &&
+                            d.Discount.Value > 0)
+                        || p.Category.CategoryDiscounts.Any(cd => 
+                            cd.Discount.IsActive && 
+                            cd.Discount.StartDate <= now && 
+                            cd.Discount.EndDate >= now &&
+                            cd.Discount.Value > 0));
+                }
+    
                 productsQuery = (query.SortBy?.ToLower()) switch
                 {
                     "name" => query.IsAscending ? productsQuery.OrderBy(p => p.Name) : productsQuery.OrderByDescending(p => p.Name),
@@ -76,11 +96,22 @@ public class ProductService : IProductService
                     .Take(query.PageSize)
                     .ToListAsync();
 
+                var productIds = products.Select(p => p.Id).ToList();
+                var reviewStatsByProductId = await _unitOfWork.Reviews.GetApprovedStatsByIdsAsync(productIds);
+                var priceMap = await _discountService.CalculateDiscountedPricesAsync(
+                    products.Select(p => new ProductPriceContext(p.Id, p.CategoryId, p.Price)).ToList());
+
                 var productDtos = new List<ProductDto>();
+                
                 foreach (var product in products)
                 {
-                    var discountedPrice = await _discountService.CalculateDiscountedPriceAsync(product.Id, product.CategoryId, product.Price);
-                    productDtos.Add(product.ToProductDto(discountedPrice));
+                    reviewStatsByProductId.TryGetValue(product.Id, out var reviewStats);
+                    var discountedPrice = priceMap[product.Id];
+
+                    productDtos.Add(product.ToProductDto(
+                        discountedPrice,
+                        reviewStats.Count,
+                        reviewStats.AverageRating));
                 }
 
                 return PaginatedList<ProductDto>.Create(productDtos, totalCount, query);
@@ -99,13 +130,14 @@ public class ProductService : IProductService
             CacheKeys.Products.ById(_cacheVersion, productId),
             async _ =>
             {
-                var product = await _unitOfWork.Products.GetByIdAsync(productId);
+                var product = await _unitOfWork.Products.GetByIdWithCategoryAsync(productId);
                 if (product is null)
                     return null; 
 
+                var reviewStats = await _unitOfWork.Reviews.GetApprovedStatsAsync(productId);
                 var discountedPrice = await _discountService
                     .CalculateDiscountedPriceAsync(product.Id, product.CategoryId, product.Price);
-                return product.ToProductDto(discountedPrice);
+                return product.ToProductDto(discountedPrice, reviewStats.Count, reviewStats.AverageRating);
             },
             new HybridCacheEntryOptions { Expiration = TimeSpan.FromMinutes(5) }
         );
@@ -127,6 +159,10 @@ public class ProductService : IProductService
             createProductDto.Price, createProductDto.StockQuantity, createProductDto.ImageUrl, category);
         
         await _unitOfWork.Products.AddAsync(product);
+        await _unitOfWork.SaveChangesAsync();
+
+        product.AssignProductCode(FormatProductCode(product.Id));
+        await _unitOfWork.Products.UpdateAsync(product);
         await _unitOfWork.SaveChangesAsync();
         
         InvalidateProductsCache();
@@ -174,34 +210,32 @@ public class ProductService : IProductService
 
     public async Task<Result> UpdateStockAsync(int productId, int quantityChange)
     {
-        var semaphore = _productLocks.GetOrAdd(productId, _ => new SemaphoreSlim(1, 1));
-
-        await semaphore.WaitAsync();
-        try
+        if (quantityChange == 0)
         {
-            var product = await _unitOfWork.Products.GetByIdAsync(productId);
+            return Result.Success();
+        }
 
-            if (product is null)
-                return Result.NotFound("Product not found");
-
-            if (product.StockQuantity + quantityChange < 0) 
-                return Result.Conflict("Insufficient stock to decrease.");      
-
-            product.UpdateStockQuantity(quantityChange);
-            await _unitOfWork.Products.UpdateAsync(product);
-            await _unitOfWork.SaveChangesAsync();
-            
+        var affectedRows = await _unitOfWork.Products.TryAdjustStockAsync(productId, quantityChange);
+        if (affectedRows > 0)
+        {
             InvalidateProductsCache();
             return Result.Success();
         }
-        finally
-        {
-            semaphore.Release();
-        }
+
+        var exists = await _unitOfWork.Products.GetByIdAsync(productId) is not null;
+        if (!exists)
+            return Result.NotFound("Product not found");
+
+        if (quantityChange < 0)
+            return Result.Conflict("Insufficient stock to decrease.");
+
+        return Result.Conflict("Unable to update stock.");
     }
     
     private static void InvalidateProductsCache()
     {
         Interlocked.Increment(ref _cacheVersion);
     }
+
+    private static string FormatProductCode(int productId) => $"PRD-{productId:D6}";
 }

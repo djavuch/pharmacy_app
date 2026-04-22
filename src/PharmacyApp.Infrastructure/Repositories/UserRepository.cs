@@ -31,7 +31,7 @@ public class UserRepository : IUserRepository
             .FirstOrDefaultAsync(u => u.Id == userId.ToString());
     }
 
-    public async Task<PaginatedList<Order?>> GetCurrentOrders(string userId, int pageIndex, int pageSize)
+    public async Task<PaginatedList<Order>> GetCurrentOrders(string userId, int pageIndex, int pageSize)
     {
         var query = _dbContext.Orders
             .AsNoTracking()
@@ -39,10 +39,10 @@ public class UserRepository : IUserRepository
             .Where(o => o.UserId == userId)
             .OrderByDescending(o => o.OrderDate);
         
-        return await PaginatedList<Order?>.CreateAsync(query, pageIndex, pageSize);
+        return await PaginatedList<Order>.CreateAsync(query, pageIndex, pageSize);
     }
 
-    public async Task<PaginatedList<Review?>> GetCurrentReviews(string userId, int pageIndex, int pageSize)
+    public async Task<PaginatedList<Review>> GetCurrentReviews(string userId, int pageIndex, int pageSize)
     {
         var query = _dbContext.Reviews
             .AsNoTracking()
@@ -50,7 +50,7 @@ public class UserRepository : IUserRepository
             .Where(r => r.UserId == userId)
             .OrderByDescending(r => r.CreatedAt);
 
-        return await PaginatedList<Review?>.CreateAsync(query, pageIndex, pageSize);
+        return await PaginatedList<Review>.CreateAsync(query, pageIndex, pageSize);
     }
 
     public async Task UpdateAsync(User user)

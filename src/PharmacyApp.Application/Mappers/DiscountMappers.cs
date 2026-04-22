@@ -1,7 +1,18 @@
-﻿using PharmacyApp.Application.Contracts.Discount;
+using PharmacyApp.Application.Contracts.Discount;
 using PharmacyApp.Domain.Entities.Discount;
+using PharmacyApp.Domain.Enums;
 
 namespace PharmacyApp.Application.Mappers;
+
+public sealed record ActiveDiscountSnapshot(
+    Guid DiscountId,
+    DiscountType DiscountType,
+    decimal Value,
+    DateTime StartDate,
+    DateTime EndDate,
+    bool IsActive,
+    IReadOnlyList<int> ProductIds,
+    IReadOnlyList<int> CategoryIds);
 
 public static class DiscountMappers
 {
@@ -20,4 +31,14 @@ public static class DiscountMappers
         ProductIds = discount.ProductDiscounts?.Select(pd => pd.ProductId).ToList() ?? [],
         CategoryIds = discount.CategoryDiscounts?.Select(cd => cd.CategoryId).ToList() ?? []
     };
+
+    public static ActiveDiscountSnapshot ToActiveDiscountSnapshot(this Discount discount) => new(
+        discount.DiscountId,
+        discount.DiscountType,
+        discount.Value,
+        discount.StartDate,
+        discount.EndDate,
+        discount.IsActive,
+        discount.ProductDiscounts.Select(pd => pd.ProductId).Distinct().ToList(),
+        discount.CategoryDiscounts.Select(cd => cd.CategoryId).Distinct().ToList());
 }

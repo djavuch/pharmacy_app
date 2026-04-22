@@ -29,6 +29,7 @@ public class UnitOfWorkRepository : IUnitOfWorkRepository
     private IUserAddressRepository? _userAddressRepository;
     private IPromoCodeRepository? _promoCodeRepository;
     private IBonusRepository? _bonusRepository;
+    private IContentPageRepository? _contentPageRepository;
 
     public UnitOfWorkRepository(
         PharmacyAppDbContext dbContext,
@@ -79,6 +80,9 @@ public class UnitOfWorkRepository : IUnitOfWorkRepository
         _promoCodeRepository ??= new PromoCodeRepository(_dbContext);
     public IBonusRepository Bonuses =>
         _bonusRepository ??= new BonusRepository(_dbContext);
+
+    public IContentPageRepository ContentPages =>
+        _contentPageRepository ??= new ContentPageRepository(_dbContext);
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

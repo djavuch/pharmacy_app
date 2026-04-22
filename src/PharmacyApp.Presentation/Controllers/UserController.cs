@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
 using PharmacyApp.Application.Common.Pagination;
@@ -31,7 +31,7 @@ public class UserController : ControllerBase
         var result = await _userService.GetCurrentUserProfileAsync(userId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -45,11 +45,13 @@ public class UserController : ControllerBase
         {
             throw new UnauthorizedException("You must be logged in to update your profile");
         }
+
+        updateUserDto.UserId = userId;
         
         var result = await _userService.UpdateUserProfileAsync(updateUserDto);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }

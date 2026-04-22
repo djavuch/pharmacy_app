@@ -16,9 +16,11 @@ public static class OrderMappers
         OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
         {
             OrderId = oi.OrderId,
-            ProductName = oi.ProductName,
+            ProductId = oi.ProductId,
+            ProductName = oi.ProductName ?? string.Empty,
             Quantity = oi.Quantity,
-            Price = oi.Price
+            Price = oi.Price,
+            Subtotal = oi.Subtotal
         }).ToList(),
         ShippingAddress = order.ShippingAddress?.ToOrderAddressDto(),
         AppliedPromoCode = order.AppliedPromoCode,

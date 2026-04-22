@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
@@ -52,7 +52,7 @@ public class AddressController : ControllerBase
         var result = await _addressService.UpdateAddressAsync(id, dto, userId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -65,7 +65,7 @@ public class AddressController : ControllerBase
         var result = await _addressService.DeleteAddressAsync(id, userId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }
@@ -77,7 +77,7 @@ public class AddressController : ControllerBase
         
         var result = await _addressService.SetDefaultAddressAsync(id, userId); 
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }

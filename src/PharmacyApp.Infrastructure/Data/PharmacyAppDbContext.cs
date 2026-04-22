@@ -34,6 +34,7 @@ public class PharmacyAppDbContext : IdentityDbContext<User>
     public DbSet<BonusAccount> BonusAccounts { get; set; }
     public DbSet<BonusTransaction> BonusTransactions { get; set; }
     public DbSet<BonusSettings> BonusSettings { get; set; }
+    public DbSet<ContentPage> ContentPages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

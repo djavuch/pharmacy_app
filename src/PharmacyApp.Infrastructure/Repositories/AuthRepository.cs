@@ -27,6 +27,11 @@ public class AuthRepository : IAuthRepository
         return await _userManager.CheckPasswordAsync(user, password);
     }
 
+    public async Task<SignInResult> CheckPasswordForSignInAsync(User user, string password, bool lockoutOnFailure)
+    {
+        return await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure);
+    }
+
     public async Task LogoutAsync()
     {
         await _signInManager.SignOutAsync();

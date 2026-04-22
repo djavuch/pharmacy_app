@@ -29,24 +29,22 @@ public class BonusRepository : IBonusRepository
             .ToListAsync();
     }
 
-    public async Task<BonusAccount> CreateAsync(BonusAccount account)
+    public Task<BonusAccount> CreateAsync(BonusAccount account)
     {
         _dbContext.BonusAccounts.Add(account);
-        await _dbContext.SaveChangesAsync();
-        return account;
+        return Task.FromResult(account);
     }
 
-    public async Task UpdateAsync(BonusAccount account)
+    public Task UpdateAsync(BonusAccount account)
     {
-        account.UpdateTimestamp();
         _dbContext.BonusAccounts.Update(account);
-        await _dbContext.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
-    public async Task AddTransactionAsync(BonusTransaction transaction)
+    public Task AddTransactionAsync(BonusTransaction transaction)
     {
         _dbContext.BonusTransactions.Add(transaction);
-        await _dbContext.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
     public async Task<IEnumerable<BonusTransaction>> GetTransactionsAsync(
@@ -72,10 +70,10 @@ public class BonusRepository : IBonusRepository
         return await _dbContext.BonusSettings.FirstAsync(s => s.Id == 1);
     }
 
-    public async Task UpdateSettingsAsync(BonusSettings settings)
+    public Task UpdateSettingsAsync(BonusSettings settings)
     {
         settings.UpdatedAt = DateTime.UtcNow;
         _dbContext.BonusSettings.Update(settings);
-        await _dbContext.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 }

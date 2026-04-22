@@ -76,7 +76,7 @@ public class AuthService : IAuthService
             await emailService.SendEmailForRegisterConfirmationAsync(newUser, token, scheme, host, ct);
         });
 
-        return Result<UserProfileDto>.Success(newUser.ToUserDto()); 
+        return Result<UserProfileDto>.Success(newUser.ToUserDto("Customer")); 
     }
 
     public async Task<Result<bool>> ConfirmEmailAsync(string userId, string token)
@@ -155,9 +155,6 @@ public class AuthService : IAuthService
 
         var token = await _unitOfWork.Auth.GeneratePasswordResetTokenAsync(user);
 
-        user.IsPasswordReset = true;
-        await _unitOfWork.Users.UpdateAsync(user);
-
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
             using var scope = _serviceProvider.CreateScope();
@@ -193,12 +190,6 @@ public class AuthService : IAuthService
         var normalizedToken = Encoding.UTF8.GetString(decodedToken);
 
         var result = await _unitOfWork.Auth.ResetPasswordAsync(user, normalizedToken, resetPasswordDto.NewPassword);
-
-        if (result.Succeeded)
-        {
-            user.IsPasswordReset = false;
-            await _unitOfWork.Users.UpdateAsync(user);
-        }
 
         return new IdentityOperationResult
         {
@@ -251,19 +242,26 @@ public class AuthService : IAuthService
             };
         }
         
-        if (user.IsPasswordReset)
+        var signInResult = await _unitOfWork.Auth
+            .CheckPasswordForSignInAsync(user, userLoginDto.Password, lockoutOnFailure: true);
+
+        if (signInResult.IsLockedOut)
         {
+            var lockedUser = await _unitOfWork.Users.GetByIdAsync(user.Id);
+            var lockoutEnd = lockedUser?.LockoutEnd ?? user.LockoutEnd;
+            var lockoutMessage = lockoutEnd.HasValue
+                ? $"Your account has been locked until {lockoutEnd.Value:yyyy-MM-dd HH:mm} UTC. Please contact support."
+                : "Your account has been locked. Please contact support.";
+
             return new LoginResult
             {
                 Succeeded = false,
-                FailureReason = LoginFailureReason.PasswordResetRequired,
-                Message = "Your password has been reset. Please set a new password."
+                FailureReason = LoginFailureReason.AccountLocked,
+                Message = lockoutMessage,
             };
         }
 
-        var signInResult = await _unitOfWork.Auth.CheckPasswordAsync(user, userLoginDto.Password);
-
-        if (!signInResult)
+        if (!signInResult.Succeeded)
         {
             return new LoginResult
             {
@@ -280,6 +278,7 @@ public class AuthService : IAuthService
         var refreshTokenEntity = new RefreshToken(refreshToken, user.Id, DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
         
         await _unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity);
+        await _unitOfWork.SaveChangesAsync();
 
         return new LoginResult
         {
@@ -319,6 +318,7 @@ public class AuthService : IAuthService
         {
             tokenEntity.Revoke();
             await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity);
+            await _unitOfWork.SaveChangesAsync();
         
             return new LoginResult
             {
@@ -340,6 +340,7 @@ public class AuthService : IAuthService
         var newRefreshTokenEntity = new RefreshToken(newRefreshToken, user.Id, DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
         
         await _unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity);
+        await _unitOfWork.SaveChangesAsync();
 
         return new LoginResult
         {

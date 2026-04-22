@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
 using PharmacyApp.Application.Contracts.Wishlist;
@@ -37,7 +37,7 @@ public class WishlistController : ControllerBase
         var result = await _wishlistService.AddToWishlistAsync(wishlistAddDto, userId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return Ok(result.Value);
     }
@@ -49,7 +49,7 @@ public class WishlistController : ControllerBase
         var result = await _wishlistService.RemoveFromWishlistAsync(userId, productId);
         
         if (!result.IsSuccess)
-            return StatusCode(result.ErrorCode, new { message = result.Message });
+            return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
         
         return NoContent();
     }

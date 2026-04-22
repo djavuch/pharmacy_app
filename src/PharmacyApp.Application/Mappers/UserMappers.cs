@@ -2,19 +2,20 @@
 using PharmacyApp.Application.Contracts.User.Admin;
 using PharmacyApp.Application.Contracts.User.Profile;
 using PharmacyApp.Domain.Entities;
+using PharmacyApp.Domain.Enums;
 
 namespace PharmacyApp.Application.Mappers;
 
 public static partial class UserMappers
 {
-    public static UserProfileDto ToUserDto(this User user) => new()
+    public static UserProfileDto ToUserDto(this User user, string? role = null) => new()
     {
         Id = user.Id,
         UserName = user.UserName ?? string.Empty,
         Email = user.Email ?? string.Empty,
+        Role = role,
         FirstName = user.FirstName ?? string.Empty,
         LastName = user.LastName ?? string.Empty,
-        Address = user.Address ?? string.Empty,
         DateOfBirth = user.DateOfBirth,
         PhoneNumber = user.PhoneNumber,
         CreatedAt = user.CreatedAt
@@ -27,7 +28,6 @@ public static partial class UserMappers
         Email = user.Email ?? string.Empty,
         FirstName = user.FirstName ?? string.Empty,
         LastName = user.LastName ?? string.Empty,
-        Address = user.Address ?? string.Empty,
         DateOfBirth = user.DateOfBirth,
         PhoneNumber = user.PhoneNumber,
         CreatedAt = user.CreatedAt,
@@ -45,12 +45,19 @@ public static partial class UserMappers
             OrderDate = order.OrderDate,
             OrderStatus = order.OrderStatus,
             TotalAmount = order.TotalAmount,
+            ShippingAddress = order.ShippingAddress?.ToOrderAddressDto(),
+            AppliedPromoCode = order.AppliedPromoCode,
+            PromoCodeDiscountAmount = order.PromoCodeDiscountAmount,
+            BonusPointsRedeemed = order.BonusPointsRedeemed,
+            BonusPointsEarned = order.BonusPointsEarned,
             OrderItems = order.OrderItems.Select(oi => new OrderItemResponseDto
             {
                 OrderId = oi.OrderId,
-                ProductName = oi.ProductName,
+                ProductId = oi.ProductId,
+                ProductName = oi.ProductName ?? string.Empty,
                 Quantity = oi.Quantity,
-                Price = oi.Price
+                Price = oi.Price,
+                Subtotal = oi.Subtotal
             }).ToList()
         };
     }
@@ -65,7 +72,7 @@ public static partial class UserMappers
             Rating = review.Rating,
             Content = review.Content,
             ReviewDate = review.CreatedAt,
-            IsApproved = review.IsApproved
+            IsApproved = review.Status == ReviewStatus.Approved
         };
     }
 }

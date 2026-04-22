@@ -8,8 +8,8 @@ namespace PharmacyApp.Application.Interfaces.Services;
 public interface IUserService 
 {
     Task<Result<UserProfileDto>> GetCurrentUserProfileAsync(string userId);
-    Task<PaginatedList<UserReviewSummaryDto?>> GetUserReviewsAsync(string userId, ReviewQueryParams queryParams);
-    Task<PaginatedList<UserOrderSummaryDto?>> GetUserOrdersAsync(string userId, QueryParams query);
+    Task<PaginatedList<UserReviewSummaryDto>> GetUserReviewsAsync(string userId, ReviewQueryParams queryParams);
+    Task<PaginatedList<UserOrderSummaryDto>> GetUserOrdersAsync(string userId, QueryParams query);
     Task<Result> UpdateUserProfileAsync(UpdateUserDto updateUserDto);
 
     // Admin specific

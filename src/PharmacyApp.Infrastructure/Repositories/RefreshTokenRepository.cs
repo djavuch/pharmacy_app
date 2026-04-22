@@ -24,13 +24,12 @@ public class RefreshTokenRepository : IRefreshTokenRepository
     public async Task AddAsync(RefreshToken refreshToken)
     {
         await _dbContext.RefreshTokens.AddAsync(refreshToken);
-        await _dbContext.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(RefreshToken refreshToken)
+    public Task UpdateAsync(RefreshToken refreshToken)
     {
         _dbContext.RefreshTokens.Update(refreshToken);
-        await _dbContext.SaveChangesAsync();
+        return Task.CompletedTask;
     }
 
     public async Task RevokeAllUserTokensAsync(string userId)

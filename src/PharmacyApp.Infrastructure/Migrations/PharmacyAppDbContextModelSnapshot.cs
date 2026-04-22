@@ -434,6 +434,84 @@ namespace PharmacyApp.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("PharmacyApp.Domain.Entities.ContentPage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("ContentPages");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Content = "This is a starter license agreement page.\nReplace this text from the admin panel before production.",
+                            CreatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsPublished = true,
+                            Slug = "license-agreement",
+                            Title = "License Agreement",
+                            UpdatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "system"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Content = "Email: support@pharmacyapp.local\nPhone: +1 (000) 000-0000\nAddress: Replace with your real support address.",
+                            CreatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsPublished = true,
+                            Slug = "contacts",
+                            Title = "Contacts",
+                            UpdatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "system"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Content = "Tell customers who you are, where you operate, and why they can trust your pharmacy.",
+                            CreatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsPublished = true,
+                            Slug = "about",
+                            Title = "About Company",
+                            UpdatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UpdatedBy = "system"
+                        });
+                });
+
             modelBuilder.Entity("PharmacyApp.Domain.Entities.Discount.CategoryDiscount", b =>
                 {
                     b.Property<int>("CategoryId")
@@ -684,6 +762,10 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
 
+                    b.Property<string>("ProductCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -701,6 +783,9 @@ namespace PharmacyApp.Infrastructure.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("ProductCode")
+                        .IsUnique();
+
                     b.ToTable("Products");
 
                     b.HasData(
@@ -712,6 +797,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FF6B6B/FFFFFF?text=Vitamin+C",
                             Name = "Vitamin C 1000mg",
                             Price = 15.99m,
+                            ProductCode = "PRD-000001",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -723,6 +809,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/4ECDC4/FFFFFF?text=Vitamin+D3",
                             Name = "Vitamin D3 5000 IU",
                             Price = 18.99m,
+                            ProductCode = "PRD-000002",
                             StockQuantity = 150,
                             WishlistCount = 0
                         },
@@ -734,6 +821,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/95E1D3/FFFFFF?text=Multivitamin",
                             Name = "Multivitamin Complex",
                             Price = 24.99m,
+                            ProductCode = "PRD-000003",
                             StockQuantity = 180,
                             WishlistCount = 0
                         },
@@ -745,6 +833,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/F38181/FFFFFF?text=Omega-3",
                             Name = "Omega-3 Fish Oil 1200mg",
                             Price = 29.99m,
+                            ProductCode = "PRD-000004",
                             StockQuantity = 120,
                             WishlistCount = 0
                         },
@@ -756,6 +845,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/AA96DA/FFFFFF?text=Calcium",
                             Name = "Calcium + Magnesium",
                             Price = 19.99m,
+                            ProductCode = "PRD-000005",
                             StockQuantity = 160,
                             WishlistCount = 0
                         },
@@ -767,6 +857,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FCBAD3/FFFFFF?text=Zinc",
                             Name = "Zinc 50mg",
                             Price = 12.99m,
+                            ProductCode = "PRD-000006",
                             StockQuantity = 220,
                             WishlistCount = 0
                         },
@@ -778,6 +869,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FFFFD2/000000?text=Iron",
                             Name = "Iron Supplement 65mg",
                             Price = 14.99m,
+                            ProductCode = "PRD-000007",
                             StockQuantity = 140,
                             WishlistCount = 0
                         },
@@ -789,6 +881,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/A8D8EA/FFFFFF?text=B-Complex",
                             Name = "B-Complex Vitamins",
                             Price = 16.99m,
+                            ProductCode = "PRD-000008",
                             StockQuantity = 190,
                             WishlistCount = 0
                         },
@@ -800,6 +893,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FFAAA5/FFFFFF?text=Probiotics",
                             Name = "Probiotics 10 Billion CFU",
                             Price = 32.99m,
+                            ProductCode = "PRD-000009",
                             StockQuantity = 100,
                             WishlistCount = 0
                         },
@@ -811,6 +905,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FF8B94/FFFFFF?text=Glucosamine",
                             Name = "Glucosamine Chondroitin MSM",
                             Price = 34.99m,
+                            ProductCode = "PRD-000010",
                             StockQuantity = 110,
                             WishlistCount = 0
                         },
@@ -822,6 +917,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FFA07A/FFFFFF?text=Ibuprofen",
                             Name = "Ibuprofen 400mg",
                             Price = 8.99m,
+                            ProductCode = "PRD-000011",
                             StockQuantity = 300,
                             WishlistCount = 0
                         },
@@ -833,6 +929,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/98D8C8/FFFFFF?text=Aspirin",
                             Name = "Aspirin 500mg",
                             Price = 6.99m,
+                            ProductCode = "PRD-000012",
                             StockQuantity = 350,
                             WishlistCount = 0
                         },
@@ -844,6 +941,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/F7B731/FFFFFF?text=Paracetamol",
                             Name = "Paracetamol 500mg",
                             Price = 7.99m,
+                            ProductCode = "PRD-000013",
                             StockQuantity = 400,
                             WishlistCount = 0
                         },
@@ -855,6 +953,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/5F27CD/FFFFFF?text=Naproxen",
                             Name = "Naproxen 250mg",
                             Price = 11.99m,
+                            ProductCode = "PRD-000014",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -866,6 +965,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/00D2FF/FFFFFF?text=Pain+Gel",
                             Name = "Muscle Pain Relief Gel",
                             Price = 13.99m,
+                            ProductCode = "PRD-000015",
                             StockQuantity = 180,
                             WishlistCount = 0
                         },
@@ -877,6 +977,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/1E90FF/FFFFFF?text=Cold+Relief",
                             Name = "Cold & Flu Relief Day & Night",
                             Price = 12.99m,
+                            ProductCode = "PRD-000016",
                             StockQuantity = 250,
                             WishlistCount = 0
                         },
@@ -888,6 +989,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/ED4C67/FFFFFF?text=Cough+Syrup",
                             Name = "Cough Syrup",
                             Price = 10.99m,
+                            ProductCode = "PRD-000017",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -899,6 +1001,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/B33771/FFFFFF?text=Lozenges",
                             Name = "Throat Lozenges",
                             Price = 5.99m,
+                            ProductCode = "PRD-000018",
                             StockQuantity = 300,
                             WishlistCount = 0
                         },
@@ -910,6 +1013,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/3B3B98/FFFFFF?text=Nasal+Spray",
                             Name = "Nasal Decongestant Spray",
                             Price = 9.99m,
+                            ProductCode = "PRD-000019",
                             StockQuantity = 180,
                             WishlistCount = 0
                         },
@@ -921,6 +1025,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/26de81/FFFFFF?text=Bandages",
                             Name = "Adhesive Bandages 100pk",
                             Price = 6.99m,
+                            ProductCode = "PRD-000020",
                             StockQuantity = 500,
                             WishlistCount = 0
                         },
@@ -932,6 +1037,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/20bf6b/FFFFFF?text=Gauze",
                             Name = "Sterile Gauze Pads",
                             Price = 8.99m,
+                            ProductCode = "PRD-000021",
                             StockQuantity = 300,
                             WishlistCount = 0
                         },
@@ -943,6 +1049,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/45aaf2/FFFFFF?text=Antiseptic",
                             Name = "Antiseptic Solution 500ml",
                             Price = 7.99m,
+                            ProductCode = "PRD-000022",
                             StockQuantity = 250,
                             WishlistCount = 0
                         },
@@ -954,6 +1061,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/ff9ff3/000000?text=First+Aid+Kit",
                             Name = "First Aid Kit Deluxe",
                             Price = 34.99m,
+                            ProductCode = "PRD-000023",
                             StockQuantity = 80,
                             WishlistCount = 0
                         },
@@ -965,6 +1073,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/feca57/000000?text=Moisturizer",
                             Name = "Moisturizing Cream",
                             Price = 16.99m,
+                            ProductCode = "PRD-000024",
                             StockQuantity = 180,
                             WishlistCount = 0
                         },
@@ -976,6 +1085,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/48dbfb/FFFFFF?text=Acne+Gel",
                             Name = "Acne Treatment Gel",
                             Price = 19.99m,
+                            ProductCode = "PRD-000025",
                             StockQuantity = 140,
                             WishlistCount = 0
                         },
@@ -987,6 +1097,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/ff9ff3/FFFFFF?text=Sunscreen",
                             Name = "Sunscreen SPF 50+",
                             Price = 14.99m,
+                            ProductCode = "PRD-000026",
                             StockQuantity = 220,
                             WishlistCount = 0
                         },
@@ -998,6 +1109,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/f9ca24/000000?text=Serum",
                             Name = "Anti-Aging Serum",
                             Price = 39.99m,
+                            ProductCode = "PRD-000027",
                             StockQuantity = 90,
                             WishlistCount = 0
                         },
@@ -1009,6 +1121,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/6ab04c/FFFFFF?text=Eczema+Cream",
                             Name = "Eczema Relief Cream",
                             Price = 22.99m,
+                            ProductCode = "PRD-000028",
                             StockQuantity = 120,
                             WishlistCount = 0
                         },
@@ -1020,6 +1133,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/6c5ce7/FFFFFF?text=Antacid",
                             Name = "Antacid Tablets",
                             Price = 9.99m,
+                            ProductCode = "PRD-000029",
                             StockQuantity = 280,
                             WishlistCount = 0
                         },
@@ -1031,6 +1145,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/00b894/FFFFFF?text=Enzymes",
                             Name = "Digestive Enzymes",
                             Price = 27.99m,
+                            ProductCode = "PRD-000030",
                             StockQuantity = 130,
                             WishlistCount = 0
                         },
@@ -1042,6 +1157,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/fdcb6e/000000?text=Laxative",
                             Name = "Laxative Tablets",
                             Price = 8.49m,
+                            ProductCode = "PRD-000031",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -1053,6 +1169,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/e17055/FFFFFF?text=Anti-Diarrheal",
                             Name = "Anti-Diarrheal Capsules",
                             Price = 11.49m,
+                            ProductCode = "PRD-000032",
                             StockQuantity = 170,
                             WishlistCount = 0
                         },
@@ -1064,6 +1181,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/55efc4/000000?text=Fiber",
                             Name = "Fiber Supplement 300g",
                             Price = 18.99m,
+                            ProductCode = "PRD-000033",
                             StockQuantity = 150,
                             WishlistCount = 0
                         },
@@ -1075,6 +1193,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/fdcb6e/000000?text=Baby+Vit+D",
                             Name = "Baby Vitamin D Drops",
                             Price = 14.99m,
+                            ProductCode = "PRD-000034",
                             StockQuantity = 160,
                             WishlistCount = 0
                         },
@@ -1086,6 +1205,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/fd79a8/FFFFFF?text=Baby+Fever",
                             Name = "Infant Fever Reducer",
                             Price = 9.99m,
+                            ProductCode = "PRD-000035",
                             StockQuantity = 220,
                             WishlistCount = 0
                         },
@@ -1097,6 +1217,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/74b9ff/FFFFFF?text=Aspirator",
                             Name = "Baby Nasal Aspirator",
                             Price = 12.99m,
+                            ProductCode = "PRD-000036",
                             StockQuantity = 140,
                             WishlistCount = 0
                         },
@@ -1108,6 +1229,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/a29bfe/FFFFFF?text=Diaper+Cream",
                             Name = "Diaper Rash Cream",
                             Price = 8.99m,
+                            ProductCode = "PRD-000037",
                             StockQuantity = 260,
                             WishlistCount = 0
                         },
@@ -1119,6 +1241,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/00cec9/FFFFFF?text=Baby+Probiotic",
                             Name = "Baby Probiotics Drops",
                             Price = 21.99m,
+                            ProductCode = "PRD-000038",
                             StockQuantity = 100,
                             WishlistCount = 0
                         },
@@ -1130,6 +1253,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/2d3436/FFFFFF?text=BP+Monitor",
                             Name = "Digital Blood Pressure Monitor",
                             Price = 49.99m,
+                            ProductCode = "PRD-000039",
                             StockQuantity = 70,
                             WishlistCount = 0
                         },
@@ -1141,6 +1265,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/636e72/FFFFFF?text=Thermometer",
                             Name = "Digital Thermometer",
                             Price = 12.99m,
+                            ProductCode = "PRD-000040",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -1152,6 +1277,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Oximeter",
                             Name = "Pulse Oximeter",
                             Price = 29.99m,
+                            ProductCode = "PRD-000041",
                             StockQuantity = 90,
                             WishlistCount = 0
                         },
@@ -1163,6 +1289,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/dfe6e9/000000?text=Nebulizer",
                             Name = "Nebulizer Machine",
                             Price = 59.99m,
+                            ProductCode = "PRD-000042",
                             StockQuantity = 50,
                             WishlistCount = 0
                         },
@@ -1174,6 +1301,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/0984e3/FFFFFF?text=Wrist+BP",
                             Name = "Wrist Blood Pressure Monitor",
                             Price = 39.99m,
+                            ProductCode = "PRD-000043",
                             StockQuantity = 80,
                             WishlistCount = 0
                         },
@@ -1185,6 +1313,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/0652DD/FFFFFF?text=Eye+Drops",
                             Name = "Lubricating Eye Drops",
                             Price = 10.99m,
+                            ProductCode = "PRD-000044",
                             StockQuantity = 240,
                             WishlistCount = 0
                         },
@@ -1196,6 +1325,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/1289A7/FFFFFF?text=Allergy+Drops",
                             Name = "Antihistamine Eye Drops",
                             Price = 13.99m,
+                            ProductCode = "PRD-000045",
                             StockQuantity = 180,
                             WishlistCount = 0
                         },
@@ -1207,6 +1337,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/C4E538/000000?text=Lens+Solution",
                             Name = "Contact Lens Solution 360ml",
                             Price = 11.99m,
+                            ProductCode = "PRD-000046",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -1218,6 +1349,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/FDA7DF/000000?text=Eye+Vitamins",
                             Name = "Eye Vitamins Complex",
                             Price = 24.99m,
+                            ProductCode = "PRD-000047",
                             StockQuantity = 130,
                             WishlistCount = 0
                         },
@@ -1229,6 +1361,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/ffffff/000000?text=Toothpaste",
                             Name = "Whitening Toothpaste",
                             Price = 7.99m,
+                            ProductCode = "PRD-000048",
                             StockQuantity = 350,
                             WishlistCount = 0
                         },
@@ -1240,6 +1373,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/00b894/FFFFFF?text=Mouthwash",
                             Name = "Antibacterial Mouthwash 500ml",
                             Price = 9.99m,
+                            ProductCode = "PRD-000049",
                             StockQuantity = 280,
                             WishlistCount = 0
                         },
@@ -1251,6 +1385,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/55efc4/000000?text=Dental+Floss",
                             Name = "Dental Floss 50m",
                             Price = 4.99m,
+                            ProductCode = "PRD-000050",
                             StockQuantity = 400,
                             WishlistCount = 0
                         },
@@ -1262,6 +1397,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Sensitive+TP",
                             Name = "Sensitive Toothpaste",
                             Price = 8.99m,
+                            ProductCode = "PRD-000051",
                             StockQuantity = 300,
                             WishlistCount = 0
                         },
@@ -1273,6 +1409,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/74b9ff/FFFFFF?text=Brush+Heads",
                             Name = "Electric Toothbrush Heads 4pk",
                             Price = 19.99m,
+                            ProductCode = "PRD-000052",
                             StockQuantity = 160,
                             WishlistCount = 0
                         },
@@ -1284,6 +1421,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/a29bfe/FFFFFF?text=Deodorant",
                             Name = "Antiperspirant Deodorant",
                             Price = 6.99m,
+                            ProductCode = "PRD-000053",
                             StockQuantity = 320,
                             WishlistCount = 0
                         },
@@ -1295,6 +1433,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/6c5ce7/FFFFFF?text=Shampoo",
                             Name = "Medicated Shampoo",
                             Price = 14.99m,
+                            ProductCode = "PRD-000054",
                             StockQuantity = 180,
                             WishlistCount = 0
                         },
@@ -1306,6 +1445,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/00cec9/FFFFFF?text=Hand+Sanitizer",
                             Name = "Hand Sanitizer 250ml",
                             Price = 5.99m,
+                            ProductCode = "PRD-000055",
                             StockQuantity = 400,
                             WishlistCount = 0
                         },
@@ -1317,6 +1457,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/fd79a8/FFFFFF?text=Foot+Cream",
                             Name = "Foot Cream with Urea",
                             Price = 11.99m,
+                            ProductCode = "PRD-000056",
                             StockQuantity = 150,
                             WishlistCount = 0
                         },
@@ -1328,6 +1469,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/fd79a8/FFFFFF?text=Prenatal",
                             Name = "Prenatal Vitamins",
                             Price = 29.99m,
+                            ProductCode = "PRD-000057",
                             StockQuantity = 140,
                             WishlistCount = 0
                         },
@@ -1339,6 +1481,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/e84393/FFFFFF?text=Primrose+Oil",
                             Name = "Evening Primrose Oil 1000mg",
                             Price = 22.99m,
+                            ProductCode = "PRD-000058",
                             StockQuantity = 120,
                             WishlistCount = 0
                         },
@@ -1350,6 +1493,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=Cranberry",
                             Name = "Cranberry Extract Capsules",
                             Price = 18.99m,
+                            ProductCode = "PRD-000059",
                             StockQuantity = 160,
                             WishlistCount = 0
                         },
@@ -1361,6 +1505,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Menopause",
                             Name = "Menopause Support Formula",
                             Price = 34.99m,
+                            ProductCode = "PRD-000060",
                             StockQuantity = 90,
                             WishlistCount = 0
                         },
@@ -1372,6 +1517,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/0984e3/FFFFFF?text=Men+Multi",
                             Name = "Men's Multivitamin",
                             Price = 26.99m,
+                            ProductCode = "PRD-000061",
                             StockQuantity = 150,
                             WishlistCount = 0
                         },
@@ -1383,6 +1529,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/2d3436/FFFFFF?text=Saw+Palmetto",
                             Name = "Saw Palmetto 320mg",
                             Price = 21.99m,
+                            ProductCode = "PRD-000062",
                             StockQuantity = 130,
                             WishlistCount = 0
                         },
@@ -1394,6 +1541,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/636e72/FFFFFF?text=Testo+Support",
                             Name = "Testosterone Support Complex",
                             Price = 38.99m,
+                            ProductCode = "PRD-000063",
                             StockQuantity = 100,
                             WishlistCount = 0
                         },
@@ -1405,6 +1553,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/00b894/FFFFFF?text=Creatine",
                             Name = "Creatine Monohydrate 250g",
                             Price = 24.99m,
+                            ProductCode = "PRD-000064",
                             StockQuantity = 170,
                             WishlistCount = 0
                         },
@@ -1416,6 +1565,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/fdcb6e/000000?text=Test+Strips",
                             Name = "Blood Glucose Test Strips 50pk",
                             Price = 22.99m,
+                            ProductCode = "PRD-000065",
                             StockQuantity = 200,
                             WishlistCount = 0
                         },
@@ -1427,6 +1577,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/e17055/FFFFFF?text=Glucose+Meter",
                             Name = "Digital Glucose Meter",
                             Price = 34.99m,
+                            ProductCode = "PRD-000066",
                             StockQuantity = 80,
                             WishlistCount = 0
                         },
@@ -1438,6 +1589,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=Lancets",
                             Name = "Lancets 100pk",
                             Price = 9.99m,
+                            ProductCode = "PRD-000067",
                             StockQuantity = 300,
                             WishlistCount = 0
                         },
@@ -1449,6 +1601,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/b2bec3/000000?text=Diabetic+Cream",
                             Name = "Diabetic Foot Cream",
                             Price = 15.99m,
+                            ProductCode = "PRD-000068",
                             StockQuantity = 140,
                             WishlistCount = 0
                         },
@@ -1460,6 +1613,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/6c5ce7/FFFFFF?text=Alpha+Lipoic",
                             Name = "Alpha Lipoic Acid 600mg",
                             Price = 27.99m,
+                            ProductCode = "PRD-000069",
                             StockQuantity = 110,
                             WishlistCount = 0
                         },
@@ -1471,6 +1625,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=CoQ10",
                             Name = "CoQ10 200mg",
                             Price = 36.99m,
+                            ProductCode = "PRD-000070",
                             StockQuantity = 120,
                             WishlistCount = 0
                         },
@@ -1482,6 +1637,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/e17055/FFFFFF?text=Magnesium",
                             Name = "Magnesium Glycinate 400mg",
                             Price = 23.99m,
+                            ProductCode = "PRD-000071",
                             StockQuantity = 150,
                             WishlistCount = 0
                         },
@@ -1493,6 +1649,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/d63031/FFFFFF?text=Red+Yeast+Rice",
                             Name = "Red Yeast Rice Extract",
                             Price = 29.99m,
+                            ProductCode = "PRD-000072",
                             StockQuantity = 100,
                             WishlistCount = 0
                         },
@@ -1504,6 +1661,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/e84393/FFFFFF?text=Hawthorn",
                             Name = "Hawthorn Berry 600mg",
                             Price = 18.99m,
+                            ProductCode = "PRD-000073",
                             StockQuantity = 130,
                             WishlistCount = 0
                         },
@@ -1515,6 +1673,7 @@ namespace PharmacyApp.Infrastructure.Migrations
                             ImageUrl = "https://via.placeholder.com/400/0984e3/FFFFFF?text=Omega-3+TS",
                             Name = "Omega-3 Triple Strength",
                             Price = 39.99m,
+                            ProductCode = "PRD-000074",
                             StockQuantity = 110,
                             WishlistCount = 0
                         });
@@ -1689,14 +1848,18 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("boolean");
-
                     b.Property<int>("ProductId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -1704,9 +1867,9 @@ namespace PharmacyApp.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProductId");
-
                     b.HasIndex("UserId");
+
+                    b.HasIndex("ProductId", "Status");
 
                     b.ToTable("Reviews");
                 });
@@ -1757,9 +1920,6 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Address")
-                        .HasColumnType("text");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
@@ -1780,9 +1940,6 @@ namespace PharmacyApp.Infrastructure.Migrations
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("IsPasswordReset")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("LastName")
                         .IsRequired()

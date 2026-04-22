@@ -28,7 +28,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         switch (exception)
         {
             case FluentValidationException validationEx:
-                httpContext.Response.StatusCode = validationEx.StatusCode;
+                httpContext.Response.StatusCode = validationEx.ErrorType.ToStatusCode();
                 body = new
                 {
                     code = validationEx.ErrorMessage,
@@ -39,7 +39,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 break;
 
             case AppExceptions appEx:
-                httpContext.Response.StatusCode = appEx.StatusCode;
+                httpContext.Response.StatusCode = appEx.ErrorType.ToStatusCode();
                 body = new
                 {
                     code = appEx.ErrorMessage,

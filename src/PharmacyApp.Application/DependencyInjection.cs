@@ -24,6 +24,8 @@ public static class DependencyInjection
         services.AddScoped<IUserAddressService, UserAddressService>();
         services.AddScoped<IPromoCodeService, PromoCodeService>();
         services.AddScoped<IBonusService, BonusService>();
+        services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+        services.AddScoped<IContentPageService, ContentPageService>();
 
         // Authorization Handlers
         services.AddScoped<IAuthorizationHandler, EmailConfirmedHandler>();

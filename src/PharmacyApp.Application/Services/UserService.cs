@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using PharmacyApp.Application.Common;
 using PharmacyApp.Application.Common.Pagination;
@@ -33,8 +33,11 @@ public class UserService : IUserService
 
                 if (user is null)
                     return null;
+
+                var roles = await _unitOfWork.Users.GetRolesAsync(user);
+                var role = roles.FirstOrDefault();
                 
-                return user.ToUserDto();
+                return user.ToUserDto(role);
             },
             new HybridCacheEntryOptions
             {
@@ -48,7 +51,7 @@ public class UserService : IUserService
         return Result<UserProfileDto>.Success(userDto);
     }
 
-    public async Task<PaginatedList<UserOrderSummaryDto?>> GetUserOrdersAsync(string userId, QueryParams query)
+    public async Task<PaginatedList<UserOrderSummaryDto>> GetUserOrdersAsync(string userId, QueryParams query)
     {
         return await _cache.GetOrCreateAsync(
             CacheKeys.Users.Orders(_cacheVersion, userId, query),
@@ -56,7 +59,14 @@ public class UserService : IUserService
             {
                 var orders = await _unitOfWork.Users.GetCurrentOrders(userId, query.PageIndex, query.PageSize);
                 var userOrdersDtos = orders.Items.Select(o => o.ToUserOrdersDto()).ToList();
-                return PaginatedList<UserOrderSummaryDto?>.Create(userOrdersDtos, orders.TotalPages, query);
+                return new PaginatedList<UserOrderSummaryDto>
+                {
+                    Items = userOrdersDtos,
+                    TotalCount = orders.TotalCount,
+                    PageIndex = orders.PageIndex,
+                    PageSize = orders.PageSize,
+                    TotalPages = orders.TotalPages
+                };
             },
             new HybridCacheEntryOptions
             {
@@ -66,7 +76,7 @@ public class UserService : IUserService
         );
     }
 
-    public async Task<PaginatedList<UserReviewSummaryDto?>> GetUserReviewsAsync(string userId, ReviewQueryParams queryParams)
+    public async Task<PaginatedList<UserReviewSummaryDto>> GetUserReviewsAsync(string userId, ReviewQueryParams queryParams)
     {
         return await _cache.GetOrCreateAsync(
             CacheKeys.Users.Reviews(_cacheVersion, userId, queryParams),
@@ -75,7 +85,7 @@ public class UserService : IUserService
                 var reviews = await _unitOfWork.Users.GetCurrentReviews(userId, queryParams.PageIndex, queryParams.PageSize);
                 var userReviewsDtos = reviews.Items.Select(r => r.ToUserReviewsDto()).ToList();
                 
-                return PaginatedList<UserReviewSummaryDto?>.Create(userReviewsDtos,  reviews.TotalPages, queryParams);
+                return PaginatedList<UserReviewSummaryDto>.Create(userReviewsDtos, reviews.TotalCount, queryParams);
               
             },
             new HybridCacheEntryOptions
@@ -88,16 +98,25 @@ public class UserService : IUserService
 
     public async Task<Result> UpdateUserProfileAsync(UpdateUserDto updateUserDto)
     {
+        if (string.IsNullOrWhiteSpace(updateUserDto.UserId))
+            return Result.BadRequest("User ID is required.");
+
         var user = await _unitOfWork.Users.GetByIdAsync(updateUserDto.UserId);
 
         if (user is null)
            return Result.NotFound("User not found");
         
-        user.FirstName = updateUserDto.FirstName;
-        user.LastName = updateUserDto.LastName;
-        user.Address = updateUserDto.Address;
-        user.PhoneNumber = updateUserDto.PhoneNumber;
-        user.UpdatedAt = DateTime.UtcNow;
+        try
+        {
+            user.UpdateProfile(
+                updateUserDto.FirstName,
+                updateUserDto.LastName,
+                updateUserDto.PhoneNumber);
+        }
+        catch (ArgumentException ex)
+        {
+            return Result.BadRequest(ex.Message);
+        }
 
         await _unitOfWork.Users.UpdateAsync(user);
         await _unitOfWork.SaveChangesAsync();
