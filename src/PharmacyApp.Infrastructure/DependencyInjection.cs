@@ -10,6 +10,7 @@ using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Application.Interfaces.RefreshTokens;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.UserRoles;
+using PharmacyApp.Infrastructure.Configuration;
 using PharmacyApp.Domain.Entities;
 using PharmacyApp.Infrastructure.Data;
 using PharmacyApp.Infrastructure.Extensions;
@@ -28,14 +29,9 @@ public static class DependencyInjection
     {
         services.AddDbContext<PharmacyAppDbContext>(options =>
         {
-            var connectionString = configuration.GetConnectionString("PharmacyAppConnection");
-
-            if (string.IsNullOrEmpty(connectionString))
-            {
-                throw new InvalidOperationException("Connection string 'PharmacyAppConnection' not found.");
-            }
-
-            options.UseNpgsql(connectionString);
+            var connectionString = PostgresConnectionStringResolver.Resolve(configuration);
+            options.UseNpgsql(connectionString, npgsql =>
+                npgsql.EnableRetryOnFailure(5, TimeSpan.FromSeconds(5), null));
         });
 
         services.Configure<EmailOptions>(configuration.GetSection("EmailConfiguration"));
@@ -68,8 +64,6 @@ public static class DependencyInjection
 
         services.AddSingleton<IBackgroundTaskQueue>(sp => new BackgroundTaskQueue(100));
         services.AddHostedService<QueueHostedService>();
-
-        services.AddScoped<IJwtTokenProvider, JwtTokenProvider>();
         
         services.AddScoped<IImageStorageService, LocalImageStorageService>();
 

@@ -106,8 +106,7 @@ cd PharmacyApp
     "Email": "admin@pharmacy.com",
     "Password": "Admin@123456",
     "FirstName": "System",
-    "LastName": "Administrator",
-    "RequirePasswordReset": true
+    "LastName": "Administrator"
   }
 }
 ```
@@ -115,7 +114,7 @@ cd PharmacyApp
 ```
 {
   "JwtSettings": {
-    "Secret": "your-super-secret-key-at-least-32-characters-long-for-production",
+    "SecretKey": "your-super-secret-key-at-least-32-characters-long-for-production",
     "Issuer": "PharmacyApp",
     "Audience": "PharmacyAppUsers",
     "ExpirationMinutes": 60
@@ -154,3 +153,37 @@ Set `"Enabled": false` in appsettings.
 ### Running the application
 - API: `https://localhost:5001` (or current `launchSettings`)
 - Frontend: default Next.js dev URL (usually `https://localhost:3000`)
+
+## Railway Deployment (Backend)
+
+### Create service
+1. Create a new Railway service from this repository.
+2. Set **Root Directory** to `src/PharmacyApp.WebApi`.
+3. Add a PostgreSQL plugin (or shared Postgres service).
+
+### Required variables
+Set these variables in the backend Railway service:
+
+```
+ASPNETCORE_ENVIRONMENT=Production
+JwtSettings__SecretKey=<at least 32 chars>
+JwtSettings__Issuer=PharmacyApp
+JwtSettings__Audience=PharmacyAppUsers
+AdminBootstrap__Enabled=true
+AdminBootstrap__Email=admin@yourdomain.com
+AdminBootstrap__Password=<strong password>
+AdminBootstrap__FirstName=System
+AdminBootstrap__LastName=Administrator
+Cors__AllowedOrigins__0=https://<your-frontend-domain>
+Frontend__BaseUrl=https://<your-frontend-domain>
+```
+
+Database variable:
+- Preferred: `ConnectionStrings__PharmacyAppConnection`
+- Also supported now: Railway `DATABASE_URL` / `DATABASE_PRIVATE_URL` / `PG*` variables
+
+### Important notes
+- Migrations run automatically on API startup (`Database.MigrateAsync()`).
+- Demo categories/products/content pages are seeded via EF migrations.
+- If you connect to an old/non-empty DB and get duplicate key seed errors, create a fresh database and redeploy.
+- After first successful deploy, set `AdminBootstrap__Enabled=false` to avoid accidental bootstrap changes.
