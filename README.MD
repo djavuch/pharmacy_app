@@ -1,6 +1,6 @@
 # PharmacyApp
 
-A modern Pharmacy Management System built with **Clean Architecture**, **ASP.NET Core 9.0** and **Entity Framework Core**.
+A modern pharmacy management system with **ASP.NET Core 9.0 backend** and **Next.js frontend** in one repository.
 
 ## Project Overview
 PharmacyApp is a robust RESTful API designed to handle pharmaceutical products, categories, shopping carts, bonus loyalty systems and customer reviews.
@@ -61,22 +61,25 @@ PharmacyApp is a robust RESTful API designed to handle pharmaceutical products, 
 
 ## Technology Stack
 - **Backend**: C# 13, .NET 9, ASP.NET Core Web API
+- **Frontend**: Next.js 16, React 19, TypeScript
 - **Architecture**: Clean Architecture (Domain, Application, Infrastructure, Presentation, WebApi)
 - **ORM**: Entity Framework Core (PostgreSQL support)
 - **Containerization**: Docker, Docker Compose
 - **Tools**: FluentValidation, MailKit
 
 ## Project Structure
-- `PharmacyApp.Domain`: Core business entities (Product, Category, Review, etc.) and logic.
-- `PharmacyApp.Application`: Application interfaces, DTOs, mapping, and business services.
-- `PharmacyApp.Infrastructure`: Data access (EF Core), repository implementations and migrations.
--  `PharmacyApp.Presentation`: API Controllers and request/response handling
-- `PharmacyApp.WebApi`: API Controllers and middleware.
+- `src/PharmacyApp.Domain`: Core business entities and domain logic.
+- `src/PharmacyApp.Application`: Application services, interfaces, DTOs and mappings.
+- `src/PharmacyApp.Infrastructure`: EF Core, repositories, external services, migrations.
+- `src/PharmacyApp.Presentation`: API controllers and presentation-level concerns.
+- `src/PharmacyApp.WebApi`: API host, middleware, app configuration.
+- `frontend/`: Next.js client application.
 
 ## Getting Started
 
 ### 1. Prerequisites
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [Node.js LTS](https://nodejs.org/)
 - [PostgreSQL](https://www.postgresql.org/download/) or use Docker
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (optional, for containerized deployment)
 
@@ -120,14 +123,24 @@ cd PharmacyApp
 }
 ```
 
-#### 3. Apply migrations
-````
+### 3. Backend setup
+#### Apply migrations
+```bash
 cd src/PharmacyApp.WebApi
 dotnet ef database update --project ../PharmacyApp.Infrastructure
-````
+```
 
-### 4. Run the application
-````dotnet run````
+#### Run API
+```bash
+dotnet run --project src/PharmacyApp.WebApi
+```
+
+### 4. Frontend setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
 ### 5. Test admin login
 ```
@@ -136,7 +149,8 @@ dotnet ef database update --project ../PharmacyApp.Infrastructure
 ```
 
 ### 6. IMPORTANT: Disable AdminBootstrap after first run
-####    Set "Enabled": false in appsettings
-### 3. Running the Application
+Set `"Enabled": false` in appsettings.
 
-By default, the API will be available at (https://localhost:5001) after starting the project.
+### Running the application
+- API: `https://localhost:5001` (or current `launchSettings`)
+- Frontend: default Next.js dev URL (usually `https://localhost:3000`)

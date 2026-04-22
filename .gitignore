@@ -487,3 +487,9 @@ $RECYCLE.BIN/
 
 # ENV files
 PharmacyApp.WebApi/.env
+
+.tmp/
+tmp-webapi-*.log
+frontend/.next/
+frontend/node_modules/
+frontend/out/
