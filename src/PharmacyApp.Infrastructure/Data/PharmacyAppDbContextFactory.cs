@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
-using PharmacyApp.Infrastructure.Configuration;
 
 namespace PharmacyApp.Infrastructure.Data;
 
@@ -18,7 +17,12 @@ public class PharmacyAppDbContextFactory : IDesignTimeDbContextFactory<PharmacyA
             .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = PostgresConnectionStringResolver.Resolve(configuration);
+        var connectionString = configuration.GetConnectionString("PharmacyAppConnection");
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException("Connection string 'PharmacyAppConnection' not found.");
+        }
 
         var optionsBuilder = new DbContextOptionsBuilder<PharmacyAppDbContext>();
         optionsBuilder.UseNpgsql(connectionString);

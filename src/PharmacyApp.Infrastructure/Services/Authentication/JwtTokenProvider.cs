@@ -19,13 +19,7 @@ public class JwtTokenProvider : IJwtTokenProvider
 
     public string GenerateToken(IEnumerable<Claim> claims)
     {
-        var secret = _jwtSettings.ResolveSecret();
-        if (string.IsNullOrWhiteSpace(secret))
-        {
-            throw new InvalidOperationException("JWT secret is not configured (JwtSettings:SecretKey or JwtSettings:Secret).");
-        }
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(

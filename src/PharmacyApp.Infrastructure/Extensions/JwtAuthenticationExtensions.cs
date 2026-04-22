@@ -26,11 +26,9 @@ public static class JwtAuthenticationExtensions
             throw new AppException("JwtSettings configuration is missing");
         }
         
-        var jwtSecret = jwtSettings.ResolveSecret();
-
-        if (string.IsNullOrWhiteSpace(jwtSecret))
+        if (string.IsNullOrEmpty(jwtSettings.SecretKey))
         {
-            throw new InvalidOperationException("JWT secret is not configured (JwtSettings:SecretKey or JwtSettings:Secret).");
+            throw new InvalidOperationException("JWT SecretKey is not configured");
         }
         
         services.AddAuthentication(options =>
@@ -52,7 +50,7 @@ public static class JwtAuthenticationExtensions
                     ValidIssuer = jwtSettings.Issuer,
                     ValidAudience = jwtSettings.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtSecret)),
+                        Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
                     RoleClaimType = ClaimTypes.Role,
                     NameClaimType = JwtRegisteredClaimNames.Sub,
                     ClockSkew = TimeSpan.Zero 

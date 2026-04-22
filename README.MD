@@ -179,8 +179,10 @@ Frontend__BaseUrl=https://<your-frontend-domain>
 ```
 
 Database variable:
-- Preferred: `ConnectionStrings__PharmacyAppConnection`
-- Also supported now: Railway `DATABASE_URL` / `DATABASE_PRIVATE_URL` / `PG*` variables
+- Required: `ConnectionStrings__PharmacyAppConnection`
+- Value example:
+`Host=${{Postgres.PGHOST}};Port=${{Postgres.PGPORT}};Database=${{Postgres.PGDATABASE}};Username=${{Postgres.PGUSER}};Password=${{Postgres.PGPASSWORD}}`
+- If DB connection fails from public proxy, add to the end: `;SSL Mode=Require`
 
 ### Important notes
 - Migrations run automatically on API startup (`Database.MigrateAsync()`).
