@@ -101,10 +101,11 @@ function clearTokens(): void {
   localStorage.removeItem("refreshToken");
 }
 
-async function buildHeaders(requireAuth = false): Promise<Record<string, string>> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+async function buildHeaders(requireAuth = false, hasJsonBody = false): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {};
+  if (hasJsonBody) {
+    headers["Content-Type"] = "application/json";
+  }
   if (requireAuth) {
     const token = await getAccessToken();
     if (token) {
@@ -115,7 +116,8 @@ async function buildHeaders(requireAuth = false): Promise<Record<string, string>
 }
 
 async function request<T>(endpoint: string, method: string, body?: unknown, requireAuth = false): Promise<T> {
-  const headers = await buildHeaders(requireAuth);
+  const hasJsonBody = body !== undefined && body !== null;
+  const headers = await buildHeaders(requireAuth, hasJsonBody);
 
   const response = await fetch(`${API_URL}${endpoint}`, {
     method,
