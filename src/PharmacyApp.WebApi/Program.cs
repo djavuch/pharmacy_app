@@ -16,9 +16,21 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddPresentation();
 
-var allowedOrigins = builder.Configuration
+// Collect allowed origins from config (supports both JSON array and
+// environment variables using the double-underscore convention, e.g.
+// Cors__AllowedOrigins__0=https://example.com).
+// The production frontend origin is always included as a hard-coded
+// fallback so CORS cannot be accidentally broken by a missing env var.
+const string productionFrontend = "https://pharmacy-frontend-production-3729.up.railway.app";
+
+var configuredOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>() ?? ["https://localhost:3000"];
+    .Get<string[]>();
+
+var allowedOrigins = (configuredOrigins is { Length: > 0 } ? configuredOrigins : ["https://localhost:3000"])
+    .Union([productionFrontend])
+    .Distinct()
+    .ToArray();
 
 builder.Services.AddCors(options =>
 {
@@ -29,13 +41,6 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowCredentials();
     });
-});
-
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
 });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -76,13 +81,15 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+// CORS must run before HTTPS redirection so that preflight OPTIONS
+// requests are not redirected (307) before the CORS headers are added.
+app.UseCors("AllowFrontend");
+
 app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
 app.UseExceptionHandler();
-
-app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
