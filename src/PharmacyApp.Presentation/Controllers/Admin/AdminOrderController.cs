@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Common.Results;
@@ -8,6 +9,7 @@ using PharmacyApp.Application.Interfaces.Services;
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("admin/orders")]
 [Area("Admin")]
 [Authorize(Roles = "Admin")]

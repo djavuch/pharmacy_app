@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("content-pages")]
 public class ContentPageController : ControllerBase
 {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
@@ -7,6 +8,7 @@ using static PharmacyApp.Domain.Exceptions.AppExceptions;
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("user/wishlist")]
 public class WishlistController : ControllerBase
 {

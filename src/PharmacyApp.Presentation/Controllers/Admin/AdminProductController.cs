@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common;
@@ -13,6 +14,7 @@ using PharmacyApp.Infrastructure.Services.FileStorage;
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Area("Admin")]
 [Route("admin/products")]
 [Authorize(Roles = "Admin")]

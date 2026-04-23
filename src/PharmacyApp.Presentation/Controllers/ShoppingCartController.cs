@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Presentation.Helpers;
@@ -7,6 +8,7 @@ using PharmacyApp.Application.Contracts.ShoppingCart;
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("cart")]
 public class ShoppingCartController : ControllerBase
 {

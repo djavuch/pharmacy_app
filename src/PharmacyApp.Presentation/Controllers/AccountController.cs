@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using PharmacyApp.Application.Interfaces.Services;
@@ -10,6 +11,7 @@ using PharmacyApp.Application.Contracts.User.Results;
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("account/")]
 public class AccountController : ControllerBase
 {
