@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Contracts.PromoCode;
 using PharmacyApp.Application.Contracts.PromoCode.Results;
@@ -7,6 +8,7 @@ using PharmacyApp.Application.Interfaces.Services;
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("admin/promo-codes")]
 [Authorize(Roles = "Admin")]
 public class PromoCodeController : ControllerBase
