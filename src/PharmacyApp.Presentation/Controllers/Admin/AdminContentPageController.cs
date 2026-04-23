@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Contracts.Content.Admin;
 using PharmacyApp.Application.Interfaces.Services;
@@ -7,6 +8,7 @@ using System.Security.Claims;
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("admin/content-pages")]
 [Authorize(Roles = "Admin")]
 public class AdminContentPageController : ControllerBase

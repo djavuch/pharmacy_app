@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
@@ -8,6 +9,7 @@ using PharmacyApp.Application.Contracts.Address;
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("user/addresses")]
 [Authorize(Policy = "EmailConfirmed")]
 public class AddressController : ControllerBase

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common;
 using PharmacyApp.Application.Common.Pagination;
@@ -8,6 +9,7 @@ using PharmacyApp.Application.Interfaces.Services;
 namespace PharmacyApp.Presentation.Controllers;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Route("store/products")]
 public class ProductController : ControllerBase
 {

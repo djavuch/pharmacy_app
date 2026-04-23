@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Contracts.Category.Admin;
@@ -8,6 +9,7 @@ using PharmacyApp.Application.Interfaces.Services;
 namespace PharmacyApp.Presentation.Controllers.Admin;
 
 [ApiController]
+[EnableCors("AllowFrontend")]
 [Area("Admin")]
 [Route("admin/categories")]
 [Authorize(Roles = "Admin")]
