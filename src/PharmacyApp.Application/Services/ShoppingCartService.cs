@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using PharmacyApp.Application.Common;
 using PharmacyApp.Application.Contracts.ShoppingCart;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.Services;
@@ -11,11 +12,16 @@ namespace PharmacyApp.Application.Services;
 public class ShoppingCartService : IShoppingCartService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
-    private readonly ILogger<ShoppingCartService> _logger;  
+    private readonly IDiscountService _discountService;
+    private readonly ILogger<ShoppingCartService> _logger;
 
-    public ShoppingCartService(IUnitOfWorkRepository unitOfWork, ILogger<ShoppingCartService> logger)
+    public ShoppingCartService(
+        IUnitOfWorkRepository unitOfWork,
+        IDiscountService discountService,
+        ILogger<ShoppingCartService> logger)
     {
         _unitOfWork = unitOfWork;
+        _discountService = discountService;
         _logger = logger;
     }
 
@@ -33,7 +39,7 @@ public class ShoppingCartService : IShoppingCartService
 
             var isAuthenticatedUser = !string.IsNullOrWhiteSpace(userId);
             cart = new ShoppingCart(userId, isAuthenticatedUser ? null : sessionId);
-            
+
             await _unitOfWork.ShoppingCarts.AddAsync(cart);
             await _unitOfWork.SaveChangesAsync();
         }
@@ -53,14 +59,14 @@ public class ShoppingCartService : IShoppingCartService
 
         var cart = await GetOrCreateCartAsync(userId, sessionId);
 
-        return Result<CartDto>.Success(cart.ToCartDto());
+        return Result<CartDto>.Success(await BuildCartDtoAsync(cart));
     }
 
     public async Task<Result<CartDto>> AddToCartAsync(string? userId, string? sessionId, AddToCartDto addToCartDto)
     {
         if (string.IsNullOrEmpty(userId) && string.IsNullOrEmpty(sessionId))
             return Result<CartDto>.Conflict("Either userId or sessionId must be provided.");
-        
+
         _logger.LogInformation("AddToCart - ProductId: {ProductId}, Quantity: {Quantity}, UserId: {UserId}, SessionId: {SessionId}",
             addToCartDto.ProductId, addToCartDto.Quantity, userId ?? "null", sessionId ?? "null");
 
@@ -71,7 +77,7 @@ public class ShoppingCartService : IShoppingCartService
 
         if (product.StockQuantity < addToCartDto.Quantity)
             return Result<CartDto>.Conflict("Insufficient stock for the requested product.");
-        
+
         var cart = await GetOrCreateCartAsync(userId, sessionId);
 
         var existingItem = await _unitOfWork.ShoppingCarts.GetItemAsync(cart.Id, addToCartDto.ProductId);
@@ -82,7 +88,7 @@ public class ShoppingCartService : IShoppingCartService
 
             if (existingItem.Quantity > product.StockQuantity)
                 return Result<CartDto>.Conflict($"Total quantity exceeds available stock: {product.StockQuantity}");
-            
+
             await _unitOfWork.ShoppingCarts.UpdateItemAsync(existingItem);
         }
         else
@@ -105,12 +111,12 @@ public class ShoppingCartService : IShoppingCartService
 
         if (cart is null)
             return Result<CartDto>.NotFound("Shopping cart not found.");
-        
+
         var cartItem = await _unitOfWork.ShoppingCarts.GetItemAsync(cart.Id, updateCartDto.ProductId);
 
         if (cartItem is null)
             return Result<CartDto>.NotFound($"Product with ID {updateCartDto.ProductId} not found in cart.");
-        
+
         if (updateCartDto.Quantity <= 0)
         {
             await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, updateCartDto.ProductId);
@@ -127,7 +133,7 @@ public class ShoppingCartService : IShoppingCartService
 
         if (updateCartDto.Quantity > product.StockQuantity)
             return Result<CartDto>.Conflict($"Requested quantity exceeds available stock: {product.StockQuantity}");
-        
+
         cartItem.SetQuantity(updateCartDto.Quantity);
         await _unitOfWork.ShoppingCarts.UpdateItemAsync(cartItem);
 
@@ -144,14 +150,14 @@ public class ShoppingCartService : IShoppingCartService
 
         if (cart is null)
             return Result.NotFound("Shopping cart not found.");
-        
+
         await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, productId);
         cart.UpdateTimestamp();
 
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
         await _unitOfWork.SaveChangesAsync();
-        
-        return  Result.Success();
+
+        return Result.Success();
     }
 
     public async Task<Result> ClearCartAsync(string? userId, string? sessionId)
@@ -166,7 +172,7 @@ public class ShoppingCartService : IShoppingCartService
         cart.UpdateTimestamp();
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
         await _unitOfWork.SaveChangesAsync();
-        
+
         return Result.Success();
     }
 
@@ -176,7 +182,7 @@ public class ShoppingCartService : IShoppingCartService
         _logger.LogInformation("MERGE: SessionId: {SessionId}", sessionId);
         _logger.LogInformation("MERGE: UserId: {UserId}", userId);
         _logger.LogInformation("MERGE: ReplaceExistingItems: {ReplaceExistingItems}", replaceExistingItems);
-        
+
         var sessionCart = await _unitOfWork.ShoppingCarts.GetBySessionIdAsync(sessionId);
         if (sessionCart is not null)
         {
@@ -187,7 +193,7 @@ public class ShoppingCartService : IShoppingCartService
         {
             _logger.LogWarning("MERGE: No session cart found for SessionId: {SessionId}", sessionId);
         }
-        
+
         var userCart = await _unitOfWork.ShoppingCarts.GetByUserIdAsync(userId);
         if (userCart is not null)
         {
@@ -215,7 +221,7 @@ public class ShoppingCartService : IShoppingCartService
 
         await _unitOfWork.ShoppingCarts.MigrateCartAsync(sessionId, userId);
         await _unitOfWork.SaveChangesAsync();
-        
+
         var mergedCart = await _unitOfWork.ShoppingCarts.GetByUserIdAsync(userId);
         if (mergedCart != null)
         {
@@ -228,25 +234,25 @@ public class ShoppingCartService : IShoppingCartService
 
         _logger.LogInformation("========== MERGE CARTS COMPLETED ==========");
     }
-    
+
     public async Task<Result> MergeCartsOnLogoutAsync(string userId, string sessionId)
     {
         if (string.IsNullOrWhiteSpace(userId))
             return Result.NotFound("userId is required.");
-    
+
         if (string.IsNullOrWhiteSpace(sessionId))
             return Result.Conflict("sessionId is required.");
-    
+
         _logger.LogInformation("========== COPY USER CART TO SESSION START ==========");
         _logger.LogInformation("COPY: UserId: {UserId}, SessionId: {SessionId}", userId, sessionId);
-    
+
         var userCart = await _unitOfWork.ShoppingCarts.GetByUserIdAsync(userId);
         if (userCart is null)
         {
             _logger.LogInformation("COPY: User cart not found. Nothing to copy.");
             return Result.NotFound("User cart not found.");
         }
-        
+
         var sessionCart = await _unitOfWork.ShoppingCarts.GetBySessionIdAsync(sessionId);
 
         if (sessionCart is not null && !string.IsNullOrWhiteSpace(sessionCart.UserId))
@@ -275,7 +281,7 @@ public class ShoppingCartService : IShoppingCartService
         }
 
         await _unitOfWork.ShoppingCarts.ClearAsync(sessionCart.Id);
-    
+
         foreach (var item in userCart.Items)
         {
             await _unitOfWork.ShoppingCarts.AddItemAsync(new CartItem(
@@ -284,11 +290,11 @@ public class ShoppingCartService : IShoppingCartService
                 item.Quantity,
                 item.PriceAtAdd));
         }
-    
+
         sessionCart.UpdateTimestamp();
         await _unitOfWork.ShoppingCarts.UpdateAsync(sessionCart);
         await _unitOfWork.SaveChangesAsync();
-        
+
         _logger.LogInformation("========== COPY USER CART TO SESSION COMPLETED ==========");
         return Result.Success();
     }
@@ -302,5 +308,26 @@ public class ShoppingCartService : IShoppingCartService
             await _unitOfWork.SaveChangesAsync();
             _logger.LogInformation("Cart cleared for UserId: {UserId}", userId);
         }
+    }
+
+    private async Task<CartDto> BuildCartDtoAsync(ShoppingCart cart)
+    {
+        if (cart.Items.Count == 0)
+            return cart.ToCartDto();
+
+        var priceContexts = cart.Items
+            .Where(item => item.Product is not null)
+            .Select(item => new ProductPriceContext(
+                item.ProductId,
+                item.Product!.CategoryId,
+                item.Product.Price))
+            .DistinctBy(item => item.ProductId)
+            .ToList();
+
+        if (priceContexts.Count == 0)
+            return cart.ToCartDto();
+
+        var effectivePrices = await _discountService.CalculateDiscountedPricesAsync(priceContexts);
+        return cart.ToCartDto(effectivePrices);
     }
 }

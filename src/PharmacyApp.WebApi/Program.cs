@@ -9,12 +9,6 @@ using PharmacyApp.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var railwayPort = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrWhiteSpace(railwayPort))
-{
-    builder.WebHost.UseUrls($"http://0.0.0.0:{railwayPort}");
-}
-
 builder.Services.AddOpenApi();
 
 builder.Services.AddApplication();
@@ -85,8 +79,6 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => Results.Ok(new { status = "ok" }));
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapControllers();
 
 

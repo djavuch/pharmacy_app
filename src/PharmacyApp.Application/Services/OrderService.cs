@@ -1,18 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PharmacyApp.Application.Interfaces;
-using PharmacyApp.Application.Interfaces.Services;
-using PharmacyApp.Application.Mappers;
-using PharmacyApp.Domain.Entities;
-using PharmacyApp.Domain.Entities.PromoCode;
-using PharmacyApp.Domain.Enums;
-using System.Data;
+using Microsoft.EntityFrameworkCore;
+using PharmacyApp.Application.Common;
 using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Contracts.Order;
 using PharmacyApp.Application.Contracts.PromoCode;
 using PharmacyApp.Application.Contracts.PromoCode.Results;
+using PharmacyApp.Application.Interfaces;
 using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Application.Interfaces.Repositories;
+using PharmacyApp.Application.Interfaces.Services;
+using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Common;
+using PharmacyApp.Domain.Entities;
+using PharmacyApp.Domain.Entities.PromoCode;
+using PharmacyApp.Domain.Enums;
+using System.Data;
 
 namespace PharmacyApp.Application.Services;
 
@@ -23,23 +24,28 @@ public class OrderService : IOrderService
     private readonly IPromoCodeService _promoCodeService;
     private readonly IProductService _productService;
     private readonly IBonusService _bonusService;
+    private readonly IDiscountService _discountService;
 
-    public OrderService(IUnitOfWorkRepository unitOfWork,
-        IOrderEmailNotifier orderEmailNotifier, IPromoCodeService
-        promoCodeService, IProductService productService, IBonusService bonusService)
+    public OrderService(
+        IUnitOfWorkRepository unitOfWork,
+        IOrderEmailNotifier orderEmailNotifier,
+        IPromoCodeService promoCodeService,
+        IProductService productService,
+        IBonusService bonusService,
+        IDiscountService discountService)
     {
         _unitOfWork = unitOfWork;
         _orderEmailNotifier = orderEmailNotifier;
         _promoCodeService = promoCodeService;
         _productService = productService;
         _bonusService = bonusService;
+        _discountService = discountService;
     }
 
     public async Task<PaginatedList<OrderSummaryDto>> GetAllOrdersAsync(QueryParams query)
     {
         var ordersQuery = _unitOfWork.Orders.GetAllAsync();
 
-        //Filtering
         if (!string.IsNullOrWhiteSpace(query.FilterOn) && !string.IsNullOrWhiteSpace(query.FilterQuery))
         {
             if (query.FilterOn.Equals("User", StringComparison.OrdinalIgnoreCase))
@@ -58,13 +64,13 @@ public class OrderService : IOrderService
                 }
             }
 
-            if (query.FilterOn.Equals("OrderDate", StringComparison.OrdinalIgnoreCase) && DateTime.TryParse(query.FilterQuery, out var orderDate))
+            if (query.FilterOn.Equals("OrderDate", StringComparison.OrdinalIgnoreCase) &&
+                DateTime.TryParse(query.FilterQuery, out var orderDate))
             {
                 ordersQuery = ordersQuery.Where(o => o.OrderDate.Date == orderDate.Date);
             }
         }
 
-        //Sorting
         if (!string.IsNullOrWhiteSpace(query.SortBy))
         {
             if (query.SortBy.Equals("User", StringComparison.OrdinalIgnoreCase))
@@ -76,12 +82,16 @@ public class OrderService : IOrderService
 
             if (query.SortBy.Equals("OrderStatus", StringComparison.OrdinalIgnoreCase))
             {
-                ordersQuery = query.IsAscending ? ordersQuery.OrderBy(o => o.OrderStatus) : ordersQuery.OrderByDescending(o => o.OrderStatus);
+                ordersQuery = query.IsAscending
+                    ? ordersQuery.OrderBy(o => o.OrderStatus)
+                    : ordersQuery.OrderByDescending(o => o.OrderStatus);
             }
 
             if (query.SortBy.Equals("OrderDate", StringComparison.OrdinalIgnoreCase))
             {
-                ordersQuery = query.IsAscending ? ordersQuery.OrderBy(o => o.OrderDate) : ordersQuery.OrderByDescending(o => o.OrderDate);
+                ordersQuery = query.IsAscending
+                    ? ordersQuery.OrderBy(o => o.OrderDate)
+                    : ordersQuery.OrderByDescending(o => o.OrderDate);
             }
         }
 
@@ -91,7 +101,7 @@ public class OrderService : IOrderService
             .Skip((query.PageIndex - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync();
-        
+
         return PaginatedList<OrderSummaryDto>.Create(orders, totalCount, query);
     }
 
@@ -115,11 +125,10 @@ public class OrderService : IOrderService
 
         while (retryCount < maxRetries)
         {
-            // Start a transaction with appropriate isolation level to handle concurrency
             try
             {
                 using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
-                // Re-fetch the cart within the transaction to ensure we have the latest data
+
                 try
                 {
                     var cart = await _unitOfWork.ShoppingCarts.GetByUserIdAsync(userId);
@@ -139,33 +148,36 @@ public class OrderService : IOrderService
                         .Distinct()
                         .ToList();
 
-                    // Get shipping address
                     OrderAddress shippingAddress;
 
                     if (createOrderDto.SavedAddressId.HasValue)
                     {
-                        // Option 1: Use saved address
                         var savedAddress = await _unitOfWork.UserAddresses.GetByIdAsync(createOrderDto.SavedAddressId.Value);
 
                         if (savedAddress == null || savedAddress.UserId != userId)
                         {
-                            return Result<OrderDetailsDto>.NotFound($"User address with ID {createOrderDto.SavedAddressId.Value} not found for the current user.");
+                            return Result<OrderDetailsDto>.NotFound(
+                                $"User address with ID {createOrderDto.SavedAddressId.Value} not found for the current user.");
                         }
 
                         shippingAddress = OrderAddress.FromUserAddress(savedAddress);
                     }
                     else if (createOrderDto.NewAddress != null)
                     {
-                        // Option 2: Use new address provided in the order DTO
-
                         shippingAddress = createOrderDto.NewAddress.ToOrderAddress();
 
-                        // Optionally save the new address to user's saved addresses
                         if (createOrderDto.SaveAddress)
                         {
-                            var newUserAddress = new UserAddress(userId, createOrderDto.NewAddress.Street, createOrderDto.NewAddress.ApartmentNumber,
-                                createOrderDto.NewAddress.City, createOrderDto.NewAddress.State, createOrderDto.NewAddress.ZipCode,
-                                createOrderDto.NewAddress.Country, createOrderDto.SavedLabel ?? string.Empty, createOrderDto.NewAddress.AdditionalInfo);
+                            var newUserAddress = new UserAddress(
+                                userId,
+                                createOrderDto.NewAddress.Street,
+                                createOrderDto.NewAddress.ApartmentNumber,
+                                createOrderDto.NewAddress.City,
+                                createOrderDto.NewAddress.State,
+                                createOrderDto.NewAddress.ZipCode,
+                                createOrderDto.NewAddress.Country,
+                                createOrderDto.SavedLabel ?? string.Empty,
+                                createOrderDto.NewAddress.AdditionalInfo);
 
                             await _unitOfWork.UserAddresses.AddAsync(newUserAddress);
                         }
@@ -177,6 +189,12 @@ public class OrderService : IOrderService
 
                     var order = new Order(userId, shippingAddress);
 
+                    var discountedPrices = await BuildDiscountedPriceMapAsync(
+                        cart.Items
+                            .Where(item => item.Product is not null)
+                            .Select(item => item.Product!)
+                            .DistinctBy(product => product.Id));
+
                     foreach (var item in cart.Items)
                     {
                         var product = item.Product;
@@ -184,9 +202,11 @@ public class OrderService : IOrderService
                         if (product is null)
                             return Result<OrderDetailsDto>.NotFound($"Product with ID {item.ProductId} not found.");
 
-                        order.OrderItems.Add(new OrderItem(item.ProductId, product.Name, item.Quantity, product.Price));
+                        var effectivePrice = discountedPrices.GetValueOrDefault(product.Id, product.Price);
 
-                        subtotalAmount += product.Price * item.Quantity;
+                        order.OrderItems.Add(new OrderItem(item.ProductId, product.Name, item.Quantity, effectivePrice));
+
+                        subtotalAmount += effectivePrice * item.Quantity;
                         var decreaseStockResult = await _productService.UpdateStockAsync(item.ProductId, -item.Quantity);
 
                         if (!decreaseStockResult.IsSuccess)
@@ -223,11 +243,9 @@ public class OrderService : IOrderService
                         }
                     }
 
-                    // Save the order first to get a real order ID for bonus transactions.
                     await _unitOfWork.Orders.AddAsync(order);
                     await _unitOfWork.SaveChangesAsync();
 
-                    // Bonus redemption
                     if (createOrderDto.RedeemBonusPoints is > 0)
                     {
                         var pointsToRedeem = Math.Min(
@@ -239,12 +257,10 @@ public class OrderService : IOrderService
                         if (!bonusResult.IsSuccess)
                             return Result<OrderDetailsDto>.BadRequest(bonusResult.Message);
 
-                        var bonusDiscount = bonusResult.Value; 
-
+                        var bonusDiscount = bonusResult.Value;
                         order.ApplyBonusRedemption(pointsToRedeem, bonusDiscount);
                     }
 
-                    // Save the promo code usage only after the order is successfully created to avoid recording usage for failed orders
                     if (order.PromoCodeId.HasValue)
                     {
                         await _unitOfWork.PromoCodes.IncrementUsageAsync(order.PromoCodeId.Value);
@@ -256,9 +272,7 @@ public class OrderService : IOrderService
 
                     await _unitOfWork.ShoppingCarts.ClearAsync(cart.Id);
 
-                    // Reward bonus points after order creation
-                    var pointsEarned = await _bonusService.EarnPointsAsync(
-                        userId, order.Id, order.TotalAmount);
+                    var pointsEarned = await _bonusService.EarnPointsAsync(userId, order.Id, order.TotalAmount);
 
                     order.SetBonusPointsEarned(pointsEarned);
 
@@ -276,28 +290,24 @@ public class OrderService : IOrderService
                     throw;
                 }
             }
-
             catch (DbUpdateConcurrencyException)
             {
                 retryCount++;
 
                 if (retryCount >= maxRetries)
                     return Result<OrderDetailsDto>.Conflict("Unable to complete the order due to concurrent updates. Please try again.");
-                
-                // Small delay before retrying to reduce contention
-                await Task.Delay(100 * retryCount);
 
-                // Retry
+                await Task.Delay(100 * retryCount);
                 continue;
             }
         }
+
         return Result<OrderDetailsDto>.Conflict("Order creation failed after multiple retries.");
     }
 
     public async Task<Result> UpdateOrderAsync(int orderId, UpdateOrderDto updateOrderDto)
     {
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(
-            IsolationLevel.ReadCommitted);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
 
         try
         {
@@ -337,6 +347,7 @@ public class OrderService : IOrderService
 
             var requestedProducts = await _unitOfWork.Products.GetByIdsAsync(requestedProductIds);
             var requestedProductMap = requestedProducts.ToDictionary(p => p.Id);
+            var discountedPrices = await BuildDiscountedPriceMapAsync(requestedProducts);
 
             foreach (var orderItem in updateOrderDto.OrderItems)
             {
@@ -345,9 +356,11 @@ public class OrderService : IOrderService
                     return Result.NotFound($"Product with ID {orderItem.ProductId} not found.");
                 }
 
-                order.OrderItems.Add(new OrderItem(orderItem.ProductId, product.Name, orderItem.Quantity, product.Price));
+                var effectivePrice = discountedPrices.GetValueOrDefault(product.Id, product.Price);
 
-                newSubtotal += orderItem.Quantity * product.Price;
+                order.OrderItems.Add(new OrderItem(orderItem.ProductId, product.Name, orderItem.Quantity, effectivePrice));
+
+                newSubtotal += orderItem.Quantity * effectivePrice;
                 newProductIds.Add(orderItem.ProductId);
                 newCategoryIds.Add(product.CategoryId);
 
@@ -363,7 +376,6 @@ public class OrderService : IOrderService
 
             order.SetAmounts(newSubtotal);
 
-            // Re-validate promo code against updated order contents
             if (order.PromoCodeId.HasValue && !string.IsNullOrWhiteSpace(order.AppliedPromoCode))
             {
                 var validateDto = new PromoCodeValidationResults
@@ -383,9 +395,7 @@ public class OrderService : IOrderService
                 }
                 else
                 {
-                    // Promo code no longer applicable — remove it from the order
                     await RollbackPromoCodeUsageIfAnyAsync(order);
-                    
                     order.RemovePromoCode();
                 }
             }
@@ -399,12 +409,12 @@ public class OrderService : IOrderService
             await _unitOfWork.SaveChangesAsync();
 
             await transaction.CommitAsync();
-            
+
             await _orderEmailNotifier.SendOrderCompositionChangeEmailAsync(order.Id);
-            
+
             return Result.Success();
         }
-        catch (DbUpdateConcurrencyException) 
+        catch (DbUpdateConcurrencyException)
         {
             await transaction.RollbackAsync();
             return Result.Conflict("Order was modified by another request. Please retry.");
@@ -418,9 +428,7 @@ public class OrderService : IOrderService
 
     public async Task<Result> CancelOrderAsync(int orderId, string userId, bool isStaff)
     {
-
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(
-            IsolationLevel.ReadCommitted);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
 
         try
         {
@@ -447,21 +455,20 @@ public class OrderService : IOrderService
             await _bonusService.ReverseOrderBonusesAsync(order.UserId, order.Id);
 
             order.ChangeStatus(OrderStatus.Cancelled);
-            
+
             await _unitOfWork.Orders.UpdateAsync(order);
             await _unitOfWork.SaveChangesAsync();
 
             await transaction.CommitAsync();
-            
+
             await _orderEmailNotifier.SendOrderCancellationEmailAsync(order.Id);
-            
+
             return Result.Success();
         }
-        catch (DbUpdateConcurrencyException) 
+        catch (DbUpdateConcurrencyException)
         {
             await transaction.RollbackAsync();
             return Result.Conflict("Order was modified by another request. Please retry.");
-            
         }
         catch (Exception)
         {
@@ -470,7 +477,6 @@ public class OrderService : IOrderService
         }
     }
 
-    // Admin specific methods   
     public async Task<Result> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusDto updateOrderStatusDto)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
@@ -490,10 +496,9 @@ public class OrderService : IOrderService
             if (oldStatus == OrderStatus.Cancelled)
                 return Result.Conflict("Cancelled orders are final and their status cannot be changed.");
 
-            if (oldStatus == newStatus) 
+            if (oldStatus == newStatus)
                 return Result.BadRequest($"Order already has status '{newStatus}'.");
 
-            // Restore stock if order is being canceled
             if (newStatus == OrderStatus.Cancelled && oldStatus != OrderStatus.Cancelled)
             {
                 var restoreStockResult = await RestoreStockForOrderItemsAsync(order.OrderItems);
@@ -503,11 +508,10 @@ public class OrderService : IOrderService
                     return restoreStockResult;
                 }
 
-                // Rollback promo code usage
                 await RollbackPromoCodeUsageIfAnyAsync(order);
                 await _bonusService.ReverseOrderBonusesAsync(order.UserId, order.Id);
             }
-            
+
             order.ChangeStatus(newStatus);
             await _unitOfWork.Orders.UpdateAsync(order);
             await _unitOfWork.SaveChangesAsync();
@@ -515,10 +519,10 @@ public class OrderService : IOrderService
             await transaction.CommitAsync();
 
             await _orderEmailNotifier.SendOrderStatusUpdateEmailAsync(order.Id, oldStatus.ToString(), newStatus.ToString());
-            
+
             return Result.Success();
         }
-        catch (DbUpdateConcurrencyException)  
+        catch (DbUpdateConcurrencyException)
         {
             await transaction.RollbackAsync();
             return Result.Conflict("Order was modified by another request. Please retry.");
@@ -529,8 +533,7 @@ public class OrderService : IOrderService
             throw;
         }
     }
-    
-    // Specific methods for optimize queries
+
     private async Task<Result> RestoreStockForOrderItemsAsync(IReadOnlyCollection<OrderItem> orderItems)
     {
         if (orderItems.Count == 0)
@@ -562,5 +565,18 @@ public class OrderService : IOrderService
         {
             await _unitOfWork.PromoCodes.DecrementUsageAsync(order.PromoCodeId.Value);
         }
+    }
+
+    private async Task<Dictionary<int, decimal>> BuildDiscountedPriceMapAsync(IEnumerable<Product> products)
+    {
+        var priceContexts = products
+            .Select(product => new ProductPriceContext(product.Id, product.CategoryId, product.Price))
+            .DistinctBy(product => product.ProductId)
+            .ToList();
+
+        if (priceContexts.Count == 0)
+            return [];
+
+        return await _discountService.CalculateDiscountedPricesAsync(priceContexts);
     }
 }
