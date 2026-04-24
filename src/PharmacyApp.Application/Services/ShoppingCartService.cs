@@ -80,7 +80,7 @@ public class ShoppingCartService : IShoppingCartService
 
         var cart = await GetOrCreateCartAsync(userId, sessionId);
 
-        var existingItem = await _unitOfWork.ShoppingCarts.GetItemAsync(cart.Id, addToCartDto.ProductId);
+        var existingItem = cart.Items.FirstOrDefault(item => item.ProductId == addToCartDto.ProductId);
 
         if (existingItem is not null)
         {
@@ -94,7 +94,9 @@ public class ShoppingCartService : IShoppingCartService
         else
         {
             var newItem = new CartItem(cart.Id, addToCartDto.ProductId, addToCartDto.Quantity, product.Price);
+            newItem.Product = product;
 
+            cart.Items.Add(newItem);
             await _unitOfWork.ShoppingCarts.AddItemAsync(newItem);
         }
 
@@ -102,7 +104,7 @@ public class ShoppingCartService : IShoppingCartService
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
         await _unitOfWork.SaveChangesAsync();
 
-        return await GetCartAsync(userId, sessionId);
+        return Result<CartDto>.Success(await BuildCartDtoAsync(cart));
     }
 
     public async Task<Result<CartDto>> UpdateCartItemAsync(string? userId, string? sessionId, UpdateCartDto updateCartDto)
@@ -112,18 +114,19 @@ public class ShoppingCartService : IShoppingCartService
         if (cart is null)
             return Result<CartDto>.NotFound("Shopping cart not found.");
 
-        var cartItem = await _unitOfWork.ShoppingCarts.GetItemAsync(cart.Id, updateCartDto.ProductId);
+        var cartItem = cart.Items.FirstOrDefault(item => item.ProductId == updateCartDto.ProductId);
 
         if (cartItem is null)
             return Result<CartDto>.NotFound($"Product with ID {updateCartDto.ProductId} not found in cart.");
 
         if (updateCartDto.Quantity <= 0)
         {
-            await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, updateCartDto.ProductId);
+            await _unitOfWork.ShoppingCarts.RemoveItemAsync(cartItem);
+            cart.Items.Remove(cartItem);
             cart.UpdateTimestamp();
             await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
             await _unitOfWork.SaveChangesAsync();
-            return await GetCartAsync(userId, sessionId);
+            return Result<CartDto>.Success(await BuildCartDtoAsync(cart));
         }
 
         var product = await _unitOfWork.Products.GetByIdAsync(updateCartDto.ProductId);
@@ -141,7 +144,7 @@ public class ShoppingCartService : IShoppingCartService
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);
         await _unitOfWork.SaveChangesAsync();
 
-        return await GetCartAsync(userId, sessionId);
+        return Result<CartDto>.Success(await BuildCartDtoAsync(cart));
     }
 
     public async Task<Result> RemoveCartItemAsync(string? userId, string? sessionId, int productId)
@@ -151,7 +154,12 @@ public class ShoppingCartService : IShoppingCartService
         if (cart is null)
             return Result.NotFound("Shopping cart not found.");
 
-        await _unitOfWork.ShoppingCarts.RemoveItemAsync(cart.Id, productId);
+        var cartItem = cart.Items.FirstOrDefault(item => item.ProductId == productId);
+        if (cartItem is null)
+            return Result.NotFound($"Product with ID {productId} not found in cart.");
+
+        await _unitOfWork.ShoppingCarts.RemoveItemAsync(cartItem);
+        cart.Items.Remove(cartItem);
         cart.UpdateTimestamp();
 
         await _unitOfWork.ShoppingCarts.UpdateAsync(cart);

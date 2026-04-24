@@ -75,13 +75,10 @@ public class ShoppingCartRepository : IShoppingCartRepository
         return Task.CompletedTask;
     }
 
-    public async Task RemoveItemAsync(int cartId, int productId)
+    public Task RemoveItemAsync(CartItem cartItem)
     {
-        var cartItem = await GetItemAsync(cartId, productId);
-        if (cartItem != null)
-        {
-            _dbContext.CartItems.Remove(cartItem);
-        }
+        _dbContext.CartItems.Remove(cartItem);
+        return Task.CompletedTask;
     }
 
     public Task ClearAsync(int cartId)

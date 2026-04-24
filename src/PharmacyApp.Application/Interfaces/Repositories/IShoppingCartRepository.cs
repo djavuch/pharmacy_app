@@ -12,7 +12,7 @@ public interface IShoppingCartRepository
     Task UpdateAsync(ShoppingCart cart);
     Task AddItemAsync(CartItem cartItem);
     Task UpdateItemAsync(CartItem cartItem);
-    Task RemoveItemAsync(int cartId, int productId);
+    Task RemoveItemAsync(CartItem cartItem);
     Task ClearAsync(int cartId);
     Task MigrateCartAsync(string sessionId, string userId);
 }
