@@ -18,8 +18,12 @@ public class EmailSenderService : IEmailSenderService
 
     public async Task SendEmailAsync(EmailRequestDto request, CancellationToken ct)
     {
+        var fromEmail = string.IsNullOrWhiteSpace(_emailOptions.FromEmail)
+            ? _emailOptions.SmtpUser
+            : _emailOptions.FromEmail;
+
         var email = new MimeMessage();
-        email.From.Add(new MailboxAddress(_emailOptions.FromName, _emailOptions.SmtpUser));
+        email.From.Add(new MailboxAddress(_emailOptions.FromName, fromEmail));
         email.To.Add(MailboxAddress.Parse(request.To));
         email.Subject = request.Subject;
 
@@ -32,10 +36,18 @@ public class EmailSenderService : IEmailSenderService
         email.Body = bodyBuilder.ToMessageBody();
 
         using var smtp = new MailKit.Net.Smtp.SmtpClient();
+        var socketOptions = _emailOptions.UseStartTls
+            ? SecureSocketOptions.StartTls
+            : SecureSocketOptions.None;
 
-        await smtp.ConnectAsync(_emailOptions.SmtpServer, _emailOptions.SmtpPort, SecureSocketOptions.StartTls);
-        await smtp.AuthenticateAsync(_emailOptions.SmtpUser, _emailOptions.SmtpPassword);
+        await smtp.ConnectAsync(_emailOptions.SmtpServer, _emailOptions.SmtpPort, socketOptions, ct);
+
+        if (_emailOptions.UseAuthentication && !string.IsNullOrWhiteSpace(_emailOptions.SmtpUser))
+        {
+            await smtp.AuthenticateAsync(_emailOptions.SmtpUser, _emailOptions.SmtpPassword, ct);
+        }
+
         await smtp.SendAsync(email);
-        await smtp.DisconnectAsync(true);
+        await smtp.DisconnectAsync(true, ct);
     }
 }
