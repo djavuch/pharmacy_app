@@ -248,9 +248,17 @@ public class OrderService : IOrderService
 
                     if (createOrderDto.RedeemBonusPoints is > 0)
                     {
+                        var bonusSettings = await _bonusService.GetSettingsAsync();
+                        var maxRedeemableByPercent = Math.Round(
+                            order.TotalAmount * bonusSettings.MaxRedeemPercent / 100m,
+                            2);
+
                         var pointsToRedeem = Math.Min(
                             createOrderDto.RedeemBonusPoints.Value,
-                            order.TotalAmount);
+                            Math.Min(order.TotalAmount, maxRedeemableByPercent));
+
+                        if (pointsToRedeem <= 0)
+                            return Result<OrderDetailsDto>.BadRequest("Bonus points cannot be redeemed for this order.");
 
                         var bonusResult = await _bonusService.RedeemPointsAsync(userId, order.Id, pointsToRedeem);
 

@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/features/cart/use-cart";
 import { useAuthStore } from "@/entities/user";
-import { addressApi, orderApi } from "@/shared/api";
-import { CreateOrderDto, SavedAddressDto } from "@/shared/types";
+import { addressApi, bonusApi, orderApi } from "@/shared/api";
+import {
+  BonusAccountDto,
+  BonusSettingsDto,
+  CreateOrderDto,
+  SavedAddressDto,
+} from "@/shared/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +36,18 @@ import {
 
 type AddressMode = "saved" | "new";
 
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatMoney(value: number): string {
+  return round2(value).toFixed(2);
+}
+
 function formatSavedAddress(address: SavedAddressDto): string {
   const firstLine = [address.street, address.apartmentNumber]
     .filter(Boolean)
@@ -39,19 +56,6 @@ function formatSavedAddress(address: SavedAddressDto): string {
     .filter(Boolean)
     .join(", ");
   return [firstLine, secondLine, address.country].filter(Boolean).join(" | ");
-}
-
-function parsePositiveNumber(value: string | null): number {
-  if (!value) {
-    return 0;
-  }
-
-  const parsed = Number.parseFloat(value.replace(",", "."));
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return 0;
-  }
-
-  return Math.round(parsed * 100) / 100;
 }
 
 export default function CheckoutPage() {
@@ -77,17 +81,14 @@ export default function CheckoutPage() {
   const [saveAddress, setSaveAddress] = useState(false);
   const [savedLabel, setSavedLabel] = useState("");
   const [promoCode, setPromoCode] = useState("");
-  const [redeemBonusPoints, setRedeemBonusPoints] = useState(0);
-  const totalWithBonuses = Math.max(0, Math.round((totalPrice - redeemBonusPoints) * 100) / 100);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const params = new URLSearchParams(window.location.search);
-    setRedeemBonusPoints(parsePositiveNumber(params.get("redeemBonusPoints")));
-  }, []);
+  const [bonusAccount, setBonusAccount] = useState<BonusAccountDto | null>(null);
+  const [bonusSettings, setBonusSettings] = useState<BonusSettingsDto | null>(null);
+  const [bonusLoading, setBonusLoading] = useState(false);
+  const [bonusError, setBonusError] = useState<string | null>(null);
+  const [useBonusPoints, setUseBonusPoints] = useState(false);
+  const [redeemBonusInput, setRedeemBonusInput] = useState("");
+  const cartId = cart?.id ?? 0;
+  const hasCartItems = Boolean(cart && cart.items.length > 0);
 
   useEffect(() => {
     let ignore = false;
@@ -144,6 +145,100 @@ export default function CheckoutPage() {
       ignore = true;
     };
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    if (!isAuthenticated || cartId === 0 || !hasCartItems) {
+      setBonusAccount(null);
+      setBonusSettings(null);
+      setBonusError(null);
+      setBonusLoading(false);
+      setUseBonusPoints(false);
+      setRedeemBonusInput("");
+      return () => {
+        ignore = true;
+      };
+    }
+
+    const loadBonusData = async () => {
+      setBonusLoading(true);
+      setBonusError(null);
+
+      try {
+        const [account, settings] = await Promise.all([
+          bonusApi.getAccount(),
+          bonusApi.getSettings(),
+        ]);
+
+        if (ignore) {
+          return;
+        }
+
+        setBonusAccount(account);
+        setBonusSettings(settings);
+      } catch (error) {
+        if (ignore) {
+          return;
+        }
+
+        setBonusAccount(null);
+        setBonusSettings(null);
+        setBonusError(error instanceof Error ? error.message : "Failed to load bonus data.");
+      } finally {
+        if (!ignore) {
+          setBonusLoading(false);
+        }
+      }
+    };
+
+    void loadBonusData();
+
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, cartId, hasCartItems]);
+
+  const maxBonusUsable = useMemo(() => {
+    if (!bonusAccount || !bonusSettings || !bonusSettings.isRedemptionEnabled) {
+      return 0;
+    }
+
+    const byPercent = round2((totalPrice * bonusSettings.maxRedeemPercent) / 100);
+    return round2(Math.max(0, Math.min(bonusAccount.balance, totalPrice, byPercent)));
+  }, [bonusAccount, bonusSettings, totalPrice]);
+
+  const parsedBonusInput = useMemo(() => {
+    const normalized = redeemBonusInput.trim().replace(",", ".");
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [redeemBonusInput]);
+
+  const redeemBonusPoints = useMemo(() => {
+    if (!useBonusPoints) {
+      return 0;
+    }
+
+    return round2(clamp(parsedBonusInput, 0, maxBonusUsable));
+  }, [useBonusPoints, parsedBonusInput, maxBonusUsable]);
+
+  useEffect(() => {
+    if (!useBonusPoints) {
+      return;
+    }
+
+    if (maxBonusUsable <= 0) {
+      setUseBonusPoints(false);
+      setRedeemBonusInput("");
+      return;
+    }
+
+    if (parsedBonusInput > maxBonusUsable) {
+      setRedeemBonusInput(String(maxBonusUsable));
+    }
+  }, [useBonusPoints, maxBonusUsable, parsedBonusInput]);
+
+  const totalWithBonuses = round2(Math.max(0, totalPrice - redeemBonusPoints));
 
   if (!cart || cart.items.length === 0) {
     if (!success) {
@@ -510,11 +605,74 @@ export default function CheckoutPage() {
                   onChange={(e) => setPromoCode(e.target.value)}
                 />
               </div>
-              {redeemBonusPoints > 0 && (
-                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  Bonus points applied from cart: {redeemBonusPoints}
-                </div>
-              )}
+              <div className="mt-4 space-y-3 rounded-lg border border-border/70 p-4">
+                <div className="text-sm font-medium">Bonus points</div>
+
+                {!isAuthenticated && (
+                  <p className="text-sm text-muted-foreground">
+                    Sign in to use bonus points during checkout.
+                  </p>
+                )}
+
+                {isAuthenticated && bonusLoading && (
+                  <p className="text-sm text-muted-foreground">
+                    Loading bonus data...
+                  </p>
+                )}
+
+                {isAuthenticated && !bonusLoading && bonusError && (
+                  <p className="text-sm text-destructive">{bonusError}</p>
+                )}
+
+                {isAuthenticated && !bonusLoading && !bonusError && bonusAccount && bonusSettings && (
+                  <>
+                    <div className="text-sm text-muted-foreground">
+                      Available: {formatMoney(bonusAccount.balance)} points
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Max usable now: {formatMoney(maxBonusUsable)} points
+                    </div>
+
+                    {!bonusSettings.isRedemptionEnabled && (
+                      <p className="text-sm text-muted-foreground">
+                        Bonus redemption is currently disabled.
+                      </p>
+                    )}
+
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={useBonusPoints}
+                        disabled={!bonusSettings.isRedemptionEnabled || maxBonusUsable <= 0}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          setUseBonusPoints(checked);
+                          if (checked && !redeemBonusInput) {
+                            setRedeemBonusInput(String(maxBonusUsable));
+                          }
+                        }}
+                      />
+                      Use bonus points for this order
+                    </label>
+
+                    {useBonusPoints && (
+                      <div className="space-y-1">
+                        <Label htmlFor="redeemBonusPointsInput">Points to redeem</Label>
+                        <Input
+                          id="redeemBonusPointsInput"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max={maxBonusUsable}
+                          value={redeemBonusInput}
+                          onChange={(event) => setRedeemBonusInput(event.target.value)}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -526,7 +684,7 @@ export default function CheckoutPage() {
           )}
 
           <Button type="submit" size="lg" disabled={loading} className="w-full rounded-full">
-            {loading ? "Placing order..." : `Place order for $${totalWithBonuses.toFixed(2)}`}
+            {loading ? "Placing order..." : `Place order for $${formatMoney(totalWithBonuses)}`}
           </Button>
         </form>
 
@@ -558,12 +716,12 @@ export default function CheckoutPage() {
               {redeemBonusPoints > 0 && (
                 <div className="flex items-center justify-between text-sm text-emerald-700">
                   <span>Bonus discount</span>
-                  <span>-${redeemBonusPoints.toFixed(2)}</span>
+                  <span>-${formatMoney(redeemBonusPoints)}</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-lg font-semibold">
                 <span>Total</span>
-                <span>${totalWithBonuses.toFixed(2)}</span>
+                <span>${formatMoney(totalWithBonuses)}</span>
               </div>
             </CardContent>
           </Card>
