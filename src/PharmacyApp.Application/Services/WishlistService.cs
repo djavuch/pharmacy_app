@@ -52,31 +52,51 @@ public class WishlistService : IWishlistService
             ProductId = wishlistDto.ProductId
         };
 
-        var addedWishlistItem = await _unitOfWork.Wishlists.AddAsync(wishlistItem);
-        
-        await _unitOfWork.Products.UpdateWishlistCountAsync(wishlistDto.ProductId, 1);
-        
-        await _unitOfWork.SaveChangesAsync();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
+
+        try
+        {
+            await _unitOfWork.Wishlists.AddAsync(wishlistItem);
+            await _unitOfWork.SaveChangesAsync();
+
+            await _unitOfWork.Products.UpdateWishlistCountAsync(wishlistDto.ProductId, 1);
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         await _cache.RemoveAsync(CacheKeys.Wishlists.ByUser(userId));
         await _cache.RemoveAsync(CacheKeys.Wishlists.UsersByProduct(wishlistDto.ProductId));
 
-        return Result<WishlistDto>.Success(addedWishlistItem.ToWishlistDto()) ;
+        return Result<WishlistDto>.Success(new WishlistDto
+        {
+            ProductId = wishlistDto.ProductId,
+            ProductName = wishlistDto.ProductName
+        });
     }
 
     public async Task<Result> RemoveFromWishlistAsync(string userId, int productId)
     {
-        var wishlistItem = await _unitOfWork.Wishlists
-            .IsProductInWishlistAsync(userId, productId);
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
 
-        if (!wishlistItem)
-            return Result.NotFound("Product is not in the wishlist.");
-        
-        await _unitOfWork.Wishlists.RemoveAsync(userId, productId);
-        
-        await _unitOfWork.Products.UpdateWishlistCountAsync(productId, -1);
-        
-        await _unitOfWork.SaveChangesAsync();
+        try
+        {
+            var removed = await _unitOfWork.Wishlists.RemoveAsync(userId, productId);
+
+            if (!removed)
+                return Result.NotFound("Product is not in the wishlist.");
+
+            await _unitOfWork.Products.UpdateWishlistCountAsync(productId, -1);
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         await _cache.RemoveAsync(CacheKeys.Wishlists.ByUser(userId));
         await _cache.RemoveAsync(CacheKeys.Wishlists.UsersByProduct(productId));

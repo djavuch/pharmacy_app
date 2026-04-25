@@ -21,22 +21,18 @@ public class WishlistRepository : IWishlistRepository
             .ToListAsync();
     }
 
-    public async Task<Wishlist> AddAsync(Wishlist wishlist)
+    public async Task AddAsync(Wishlist wishlist)
     {
         await _dbContext.Wishlists.AddAsync(wishlist);
-        await _dbContext.Entry(wishlist).Reference(w => w.Product).LoadAsync();
-        return wishlist;
     }
 
-    public async Task RemoveAsync(string userId, int productId)
+    public async Task<bool> RemoveAsync(string userId, int productId)
     {
-        var wishlistItem = await _dbContext.Wishlists
-            .FirstOrDefaultAsync(w => w.UserId == userId && w.ProductId == productId);
+        var removed = await _dbContext.Wishlists
+            .Where(w => w.UserId == userId && w.ProductId == productId)
+            .ExecuteDeleteAsync();
 
-        if (wishlistItem != null)
-        {
-            _dbContext.Wishlists.Remove(wishlistItem);
-        }
+        return removed > 0;
     }
 
     public async Task<bool> IsProductInWishlistAsync(string userId, int productId)
