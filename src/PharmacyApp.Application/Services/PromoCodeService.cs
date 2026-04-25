@@ -46,6 +46,7 @@ public class PromoCodeService : IPromoCodeService
 
         var createdPromoCode = await _unitOfWork.PromoCodes.AddAsync(promoCode);
         await _unitOfWork.SaveChangesAsync();
+        await InvalidatePromoCodeCachesAsync(createdPromoCode.PromoCodeId, createdPromoCode.Code);
         return  Result<PromoCodeDto>.Success(createdPromoCode.ToPromoCodeDto());
     }
 
@@ -81,8 +82,11 @@ public class PromoCodeService : IPromoCodeService
 
     public async Task<IEnumerable<PromoCodeDto>> GetActivePromoCodesAsync()
     {
-        var promoCodes = await _unitOfWork.PromoCodes.GetActivePromoCodesAsync();
-        return promoCodes.Select(p => p.ToPromoCodeDto());
+        return await _cache.GetOrCreateAsync(CacheKeys.PromoCodes.Active, async _ =>
+        {
+            var promoCodes = await _unitOfWork.PromoCodes.GetActivePromoCodesAsync();
+            return promoCodes.Select(p => p.ToPromoCodeDto());
+        });
     }
 
     public async Task<Result> UpdatePromoCodeAsync(Guid promoCodeId, UpdatePromoCodeDto updatePromoCodeDto)
@@ -95,6 +99,8 @@ public class PromoCodeService : IPromoCodeService
 
         if (promoCode is null)
             return Result.NotFound("Promo code not found.");
+
+        var previousCode = promoCode.Code;
 
         // Check if the new code (if changed) is unique
         var codeExists = await _unitOfWork.PromoCodes.CodeExistsAsync(updatePromoCodeDto.Code.ToUpper(), promoCodeId);
@@ -113,11 +119,8 @@ public class PromoCodeService : IPromoCodeService
         
         await _unitOfWork.PromoCodes.UpdateAsync(promoCode);
         await _unitOfWork.SaveChangesAsync();
-        
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.All);
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.Active);
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.ById(promoCodeId));
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.ByCode(promoCode.Code));
+
+        await InvalidatePromoCodeCachesAsync(promoCodeId, previousCode, promoCode.Code);
         
         return Result.Success();
     }
@@ -130,11 +133,8 @@ public class PromoCodeService : IPromoCodeService
         
         await _unitOfWork.PromoCodes.DeleteAsync(promoCodeId);
         await _unitOfWork.SaveChangesAsync();
-        
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.All);
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.Active);
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.ById(promoCodeId));
-        await _cache.RemoveAsync(CacheKeys.PromoCodes.ByCode(promoCode.Code));
+
+        await InvalidatePromoCodeCachesAsync(promoCodeId, promoCode.Code);
         
         return Result.Success();
     }
@@ -149,6 +149,7 @@ public class PromoCodeService : IPromoCodeService
 
         await _unitOfWork.PromoCodes.UpdateAsync(promoCode);
         await _unitOfWork.SaveChangesAsync();
+        await InvalidatePromoCodeCachesAsync(promoCodeId, promoCode.Code);
         return Result.Success();
     }
 
@@ -162,6 +163,7 @@ public class PromoCodeService : IPromoCodeService
 
         await _unitOfWork.PromoCodes.UpdateAsync(promoCode);
         await _unitOfWork.SaveChangesAsync();
+        await InvalidatePromoCodeCachesAsync(promoCodeId, promoCode.Code);
         return Result.Success();
     }
 
@@ -236,5 +238,25 @@ public class PromoCodeService : IPromoCodeService
             discount = promoCode.MaximumDiscountAmount.Value;
 
         return discount;
+    }
+
+    private async Task InvalidatePromoCodeCachesAsync(Guid promoCodeId, params string[] codes)
+    {
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.All);
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.Active);
+        await _cache.RemoveAsync(CacheKeys.PromoCodes.ById(promoCodeId));
+
+        var processedCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var code in codes)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                continue;
+
+            var normalizedCode = code.Trim().ToUpperInvariant();
+            if (!processedCodes.Add(normalizedCode))
+                continue;
+
+            await _cache.RemoveAsync(CacheKeys.PromoCodes.ByCode(normalizedCode));
+        }
     }
 }
