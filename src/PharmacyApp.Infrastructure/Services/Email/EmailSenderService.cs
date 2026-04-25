@@ -22,8 +22,22 @@ public class EmailSenderService : IEmailSenderService
             ? _emailOptions.SmtpUser
             : _emailOptions.FromEmail;
 
+        fromEmail = fromEmail.Trim();
+
+        if (string.IsNullOrWhiteSpace(fromEmail))
+        {
+            throw new InvalidOperationException(
+                "EmailConfiguration:FromEmail must be set when SMTP authentication is disabled or SmtpUser is empty.");
+        }
+
+        if (!MailboxAddress.TryParse(fromEmail, out var parsedFromAddress))
+        {
+            throw new InvalidOperationException(
+                $"EmailConfiguration:FromEmail contains an invalid email address: '{fromEmail}'.");
+        }
+
         var email = new MimeMessage();
-        email.From.Add(new MailboxAddress(_emailOptions.FromName, fromEmail));
+        email.From.Add(new MailboxAddress(_emailOptions.FromName, parsedFromAddress.Address));
         email.To.Add(MailboxAddress.Parse(request.To));
         email.Subject = request.Subject;
 
