@@ -501,11 +501,20 @@ public class OrderService : IOrderService
             var oldStatus = order.OrderStatus;
             var newStatus = updateOrderStatusDto.Status;
 
+            if (oldStatus == newStatus)
+                return Result.BadRequest($"Order already has status '{newStatus}'.");
+
             if (oldStatus == OrderStatus.Cancelled)
                 return Result.Conflict("Cancelled orders are final and their status cannot be changed.");
 
-            if (oldStatus == newStatus)
-                return Result.BadRequest($"Order already has status '{newStatus}'.");
+            if (oldStatus == OrderStatus.Delivered)
+                return Result.Conflict("Delivered orders are final and cannot be changed.");
+
+            if (newStatus == OrderStatus.Cancelled &&
+                oldStatus is not OrderStatus.Pending and not OrderStatus.Processing)
+            {
+                return Result.Conflict("Only pending or processing orders can be cancelled.");
+            }
 
             if (newStatus == OrderStatus.Cancelled && oldStatus != OrderStatus.Cancelled)
             {

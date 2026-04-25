@@ -10,9 +10,8 @@ public class UpdateOrderStatusDtoValidator : AbstractValidator<UpdateOrderStatus
     {
         RuleFor(x => x.OrderId)
             .GreaterThan(0).WithMessage("OrderId is required.");
+
         RuleFor(x => x.Status)
-            .IsInEnum().WithMessage("Invalid status.")
-            .NotEqual(OrderStatus.Cancelled).When(x => x.Status == OrderStatus.Delivered)
-                .WithMessage("Cannot change status of a delivered order to cancelled.");
+            .IsInEnum().WithMessage("Invalid status.");
     }
 }

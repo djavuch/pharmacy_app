@@ -25,7 +25,12 @@ import {
 } from "@/components/ui/dialog";
 import { orderSortOptions, orderStatuses, type OrdersSort } from "./admin-constants";
 import { buildUrlWithQuery, getCurrentUrl, parseEnumParam, parsePositiveIntParam } from "./query-state";
-import { getOrderStatusBadgeClass, getStatusText } from "./status-utils";
+import {
+  canChangeOrderStatus,
+  getOrderStatusBadgeClass,
+  getStatusText,
+  isLockedOrderStatus,
+} from "./status-utils";
 
 const orderSortLabels: Record<OrdersSort, string> = {
   date_desc: "Newest first",
@@ -130,8 +135,8 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
         setStatusDraftByOrderId((prev) => {
           const next = { ...prev };
           for (const order of items) {
-            if (order.orderStatus === "Cancelled") {
-              next[order.id] = "Cancelled";
+            if (isLockedOrderStatus(order.orderStatus)) {
+              next[order.id] = order.orderStatus;
               continue;
             }
 
@@ -154,10 +159,10 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
   }, [page, pageSize, search, statusFilter, sort]);
 
   const handleStatusSave = async (order: OrderSummaryDto) => {
-    if (order.orderStatus === "Cancelled") {
+    if (isLockedOrderStatus(order.orderStatus)) {
       setStatusDraftByOrderId((current) => ({
         ...current,
-        [order.id]: "Cancelled",
+        [order.id]: order.orderStatus,
       }));
       return;
     }
@@ -170,6 +175,15 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
     setStatusSavingOrderId(order.id);
     setError(null);
     try {
+      if (!canChangeOrderStatus(order.orderStatus, nextStatus)) {
+        setStatusDraftByOrderId((current) => ({
+          ...current,
+          [order.id]: order.orderStatus,
+        }));
+        setError("This order can no longer be cancelled or moved to that status.");
+        return;
+      }
+
       await adminOrderApi.updateStatus(order.id, nextStatus);
 
       setOrders((current) =>
@@ -314,9 +328,12 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
                   {orders.map((order) => {
                     const selectedStatus =
                       statusDraftByOrderId[order.id] ?? order.orderStatus;
+                    const availableStatuses = orderStatuses.filter((status) =>
+                      canChangeOrderStatus(order.orderStatus, status),
+                    );
                     const statusChanged = selectedStatus !== order.orderStatus;
                     const isUpdating = statusSavingOrderId === order.id;
-                    const isCancelledOrder = order.orderStatus === "Cancelled";
+                    const isLockedOrder = isLockedOrderStatus(order.orderStatus);
 
                     return (
                       <TableRow key={order.id}>
@@ -336,10 +353,11 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
                           <div className="flex items-center gap-2">
                             <Select
                               value={selectedStatus}
-                              disabled={isCancelledOrder}
+                              disabled={isLockedOrder}
                               onValueChange={(value) => {
                                 if (!value) return;
-                                if (isCancelledOrder) return;
+                                if (isLockedOrder) return;
+                                if (!canChangeOrderStatus(order.orderStatus, value as OrderStatus)) return;
                                 setStatusDraftByOrderId((current) => ({
                                   ...current,
                                   [order.id]: value as OrderStatus,
@@ -352,7 +370,7 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
                                 </SelectValue>
                               </SelectTrigger>
                               <SelectContent>
-                                {orderStatuses.map((status) => (
+                                {availableStatuses.map((status) => (
                                   <SelectItem key={`order-status-${order.id}-${status}`} value={status}>
                                     {getStatusText(status)}
                                   </SelectItem>
@@ -362,7 +380,7 @@ export function OrdersTab({ isActive }: { isActive: boolean }) {
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={isCancelledOrder || !statusChanged || isUpdating}
+                              disabled={isLockedOrder || !statusChanged || isUpdating}
                               onClick={() => void handleStatusSave(order)}
                             >
                               {isUpdating ? "Saving..." : "Save"}

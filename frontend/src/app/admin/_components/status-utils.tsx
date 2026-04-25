@@ -21,6 +21,21 @@ export function getOrderStatusBadgeClass(status: OrderStatus): string {
   return "bg-slate-100 text-slate-800";
 }
 
+export function isLockedOrderStatus(status: OrderStatus): boolean {
+  return status === "Delivered" || status === "Cancelled";
+}
+
+export function canChangeOrderStatus(current: OrderStatus, next: OrderStatus): boolean {
+  if (current === next) return true;
+  if (isLockedOrderStatus(current)) return false;
+
+  if (next === "Cancelled") {
+    return current === "Pending" || current === "Processing";
+  }
+
+  return true;
+}
+
 export function getReviewStatusBadgeClass(status: ReviewStatus): string {
   if (status === "Approved") return "bg-green-100 text-green-800";
   if (status === "Rejected") return "bg-rose-100 text-rose-800";
