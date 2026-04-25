@@ -4,6 +4,7 @@ import { useCartStore } from "@/shared/stores/cart";
 export function useCart() {
   const cart = useCartStore((state) => state.cart);
   const isLoading = useCartStore((state) => state.isLoading);
+  const isLoaded = useCartStore((state) => state.isLoaded);
   const loadCart = useCartStore((state) => state.loadCart);
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
@@ -14,15 +15,17 @@ export function useCart() {
   const quantityByProductId = useCartStore((state) => state.quantityByProductId);
 
   useEffect(() => {
-    void loadCart();
-  }, [loadCart]);
+    if (!isLoaded) {
+      void loadCart();
+    }
+  }, [isLoaded, loadCart]);
 
   return {
     cart,
     isLoading,
     itemsCount: itemsCountValue,
     totalPrice: totalPriceValue,
-    refreshCart: loadCart,
+    refreshCart: () => loadCart(true),
     addItem,
     removeItem,
     updateQuantity,

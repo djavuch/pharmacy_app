@@ -8,7 +8,7 @@ public interface IShoppingCartService
     Task<Result<CartDto>> GetCartAsync(string? userId, string? sessionId);
     Task<Result<CartDto>> AddToCartAsync(string? userId, string? sessionId, AddToCartDto addToCartDto);
     Task<Result<CartDto>> UpdateCartItemAsync(string? userId, string? sessionId, UpdateCartDto updateCartDto);
-    Task<Result> RemoveCartItemAsync(string? userId, string? sessionId, int productId);
+    Task<Result<CartDto>> RemoveCartItemAsync(string? userId, string? sessionId, int productId);
     Task<Result> ClearCartAsync(string? userId, string? sessionId);
     Task MergeCartsOnLoginAsync(string sessionId, string userId, bool replaceExistingItems = false);
     Task<Result> MergeCartsOnLogoutAsync(string userId, string sessionId);

@@ -46,7 +46,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
 
       await get().loadProfile();
-      await useCartStore.getState().loadCart();
+      await useCartStore.getState().loadCart(true);
     } catch (error) {
       set({ isLoading: false });
       throw error;
@@ -100,6 +100,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     clearTokens();
     set({ profile: null, isAuthenticated: false });
-    await useCartStore.getState().loadCart();
+    await useCartStore.getState().loadCart(true);
   },
 }));

@@ -94,11 +94,16 @@ public class ShoppingCartController : ControllerBase
     {
         var (userId, sessionId) = GetUserIdentifiers();
         var result = await _shoppingCartService.RemoveCartItemAsync(userId, sessionId, productId);
-        
+
+        if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrEmpty(sessionId))
+        {
+            SessionHelper.ClearSessionId(HttpContext);
+        }
+
         if (!result.IsSuccess)
             return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
 
-        return NoContent();
+        return Ok(result.Value);
     }
 
     [HttpDelete]

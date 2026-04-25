@@ -365,7 +365,7 @@ export const cartApi = {
       request<CartDto>(`/cart/items/${dto.productId}`, "PUT", dto, true),
 
   remove: (productId: number) =>
-      request<void>(`/cart/items/${productId}`, "DELETE", undefined, true),
+      request<CartDto>(`/cart/items/${productId}`, "DELETE", undefined, true),
 
   clear: () =>
       request<void>("/cart", "DELETE", undefined, true),
