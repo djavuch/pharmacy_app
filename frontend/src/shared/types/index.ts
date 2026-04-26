@@ -197,6 +197,21 @@ export interface CreatePromoCodeDto {
 
 export type UpdatePromoCodeDto = CreatePromoCodeDto;
 
+export interface PromoCodeValidationDto {
+  code: string;
+  userId: string;
+  orderAmount: number;
+  productIds: number[];
+  categoryIds: number[];
+}
+
+export interface PromoCodeValidationResultDto {
+  isValid: boolean;
+  message: string;
+  discountAmount: number;
+  promoCodeId?: string;
+}
+
 // === Bonus ===
 export type BonusTransactionType = "Earned" | "Redeemed" | "Refunded" | "AdminAdjustment";
 

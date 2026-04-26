@@ -170,6 +170,7 @@ public class PromoCodeService : IPromoCodeService
     public async Task<PromoCodeValidationResultDto> ValidatePromoCodeAsync(PromoCodeValidationResults validationResults)
     {
         var promoCode = await _unitOfWork.PromoCodes.GetByCodeAsync(validationResults.Code);
+        var categoryIds = validationResults.CategoryIds;
 
         if (promoCode is null)
             return new PromoCodeValidationResultDto
@@ -202,10 +203,19 @@ public class PromoCodeService : IPromoCodeService
         // Check if promo code is applicable to specific products
         if (!promoCode.ApplicableToAllProducts)
         {
+            if (categoryIds.Count == 0 && validationResults.ProductIds.Count > 0)
+            {
+                var products = await _unitOfWork.Products.GetByIdsAsync(validationResults.ProductIds);
+                categoryIds = products
+                    .Select(product => product.CategoryId)
+                    .Distinct()
+                    .ToList();
+            }
+
             var hasApplicableProducts = validationResults.ProductIds.Any(pid =>
                 promoCode.PromoCodeProducts.Any(p => p.ProductId == pid));
 
-            var matchesCategory = validationResults.CategoryIds.Any(cid =>
+            var matchesCategory = categoryIds.Any(cid =>
                 promoCode.PromoCodeCategories.Any(c => c.CategoryId == cid));
 
             if (!hasApplicableProducts && !matchesCategory)

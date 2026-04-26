@@ -33,6 +33,8 @@
   PromoCodeDto,
   CreatePromoCodeDto,
   UpdatePromoCodeDto,
+  PromoCodeValidationDto,
+  PromoCodeValidationResultDto,
   BonusSettingsDto,
   UpdateBonusSettingsDto,
   BonusAccountDto,
@@ -381,6 +383,11 @@ export const orderApi = {
 
   cancel: (id: number) =>
     request<void>(`/orders/${id}/cancel`, "POST", undefined, true),
+};
+
+export const promoCodeApi = {
+  validate: (dto: PromoCodeValidationDto) =>
+    request<PromoCodeValidationResultDto>("/validate", "POST", dto, true),
 };
 
 // ========== ADMIN: PRODUCTS ==========

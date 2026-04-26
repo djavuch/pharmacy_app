@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/features/cart/use-cart";
 import { useAuthStore } from "@/entities/user";
-import { addressApi, bonusApi, orderApi } from "@/shared/api";
+import { addressApi, bonusApi, orderApi, promoCodeApi } from "@/shared/api";
 import {
   BonusAccountDto,
   BonusSettingsDto,
   CreateOrderDto,
+  PromoCodeValidationResultDto,
   SavedAddressDto,
 } from "@/shared/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -35,6 +36,7 @@ import {
 } from "lucide-react";
 
 type AddressMode = "saved" | "new";
+type AppliedPromoCode = PromoCodeValidationResultDto & { code: string };
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
@@ -46,6 +48,10 @@ function clamp(value: number, min: number, max: number): number {
 
 function formatMoney(value: number): string {
   return round2(value).toFixed(2);
+}
+
+function normalizePromoCode(value: string): string {
+  return value.trim().toUpperCase();
 }
 
 function formatSavedAddress(address: SavedAddressDto): string {
@@ -61,7 +67,7 @@ function formatSavedAddress(address: SavedAddressDto): string {
 export default function CheckoutPage() {
   const router = useRouter();
   const { cart, totalPrice, clearCart } = useCart();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, profile } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -81,6 +87,9 @@ export default function CheckoutPage() {
   const [saveAddress, setSaveAddress] = useState(false);
   const [savedLabel, setSavedLabel] = useState("");
   const [promoCode, setPromoCode] = useState("");
+  const [appliedPromoCode, setAppliedPromoCode] = useState<AppliedPromoCode | null>(null);
+  const [promoCodeError, setPromoCodeError] = useState<string | null>(null);
+  const [promoCodeLoading, setPromoCodeLoading] = useState(false);
   const [bonusAccount, setBonusAccount] = useState<BonusAccountDto | null>(null);
   const [bonusSettings, setBonusSettings] = useState<BonusSettingsDto | null>(null);
   const [bonusLoading, setBonusLoading] = useState(false);
@@ -89,6 +98,10 @@ export default function CheckoutPage() {
   const [redeemBonusInput, setRedeemBonusInput] = useState("");
   const cartId = cart?.id ?? 0;
   const hasCartItems = Boolean(cart && cart.items.length > 0);
+  const checkoutUserId = profile?.id ?? cart?.userId ?? "";
+  const normalizedPromoCode = normalizePromoCode(promoCode);
+  const promoDiscountAmount = appliedPromoCode?.discountAmount ?? 0;
+  const totalAfterPromo = round2(Math.max(0, totalPrice - promoDiscountAmount));
 
   useEffect(() => {
     let ignore = false;
@@ -204,9 +217,9 @@ export default function CheckoutPage() {
       return 0;
     }
 
-    const byPercent = round2((totalPrice * bonusSettings.maxRedeemPercent) / 100);
-    return round2(Math.max(0, Math.min(bonusAccount.balance, totalPrice, byPercent)));
-  }, [bonusAccount, bonusSettings, totalPrice]);
+    const byPercent = round2((totalAfterPromo * bonusSettings.maxRedeemPercent) / 100);
+    return round2(Math.max(0, Math.min(bonusAccount.balance, totalAfterPromo, byPercent)));
+  }, [bonusAccount, bonusSettings, totalAfterPromo]);
 
   const parsedBonusInput = useMemo(() => {
     const normalized = redeemBonusInput.trim().replace(",", ".");
@@ -238,7 +251,7 @@ export default function CheckoutPage() {
     }
   }, [useBonusPoints, maxBonusUsable, parsedBonusInput]);
 
-  const totalWithBonuses = round2(Math.max(0, totalPrice - redeemBonusPoints));
+  const totalWithBonuses = round2(Math.max(0, totalAfterPromo - redeemBonusPoints));
 
   if (!cart || cart.items.length === 0) {
     if (!success) {
@@ -287,6 +300,60 @@ export default function CheckoutPage() {
     );
   }
 
+  const handleApplyPromoCode = async () => {
+    setError(null);
+    setPromoCodeError(null);
+
+    if (!isAuthenticated) {
+      router.push("/login?redirect=/checkout");
+      return;
+    }
+
+    if (!normalizedPromoCode) {
+      setAppliedPromoCode(null);
+      setPromoCodeError("Enter a promo code to apply it.");
+      return;
+    }
+
+    if (!checkoutUserId) {
+      setPromoCodeError("Could not verify your account for promo code validation. Refresh and try again.");
+      return;
+    }
+
+    if (!cart || cart.items.length === 0) {
+      setAppliedPromoCode(null);
+      setPromoCodeError("Your cart is empty.");
+      return;
+    }
+
+    setPromoCodeLoading(true);
+
+    try {
+      const result = await promoCodeApi.validate({
+        code: normalizedPromoCode,
+        userId: checkoutUserId,
+        orderAmount: totalPrice,
+        productIds: cart.items.map((item) => item.productId),
+        categoryIds: [],
+      });
+
+      setPromoCode(normalizedPromoCode);
+      setAppliedPromoCode({ ...result, code: normalizedPromoCode });
+    } catch (err) {
+      setAppliedPromoCode(null);
+      setPromoCodeError(err instanceof Error ? err.message : "Failed to apply promo code.");
+    } finally {
+      setPromoCodeLoading(false);
+    }
+  };
+
+  const handleRemovePromoCode = () => {
+    setPromoCode("");
+    setPromoCodeError(null);
+    setAppliedPromoCode(null);
+    setError(null);
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
@@ -319,12 +386,17 @@ export default function CheckoutPage() {
       }
     }
 
+    if (normalizedPromoCode && (!appliedPromoCode || appliedPromoCode.code !== normalizedPromoCode)) {
+      setError("Apply the promo code before placing the order, or clear the field.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const payload: CreateOrderDto = {
         saveAddress: false,
-        promoCode: promoCode.trim() || undefined,
+        promoCode: appliedPromoCode?.code || undefined,
         redeemBonusPoints: redeemBonusPoints > 0 ? redeemBonusPoints : undefined,
       };
 
@@ -598,12 +670,56 @@ export default function CheckoutPage() {
             <CardContent>
               <div className="space-y-2">
                 <Label htmlFor="promoCode">Promo code</Label>
-                <Input
-                  id="promoCode"
-                  placeholder="Add a promo code if you have one"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                />
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="promoCode"
+                    placeholder="Add a promo code if you have one"
+                    value={promoCode}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      const nextNormalizedCode = normalizePromoCode(nextValue);
+
+                      setPromoCode(nextValue);
+                      setError(null);
+                      setPromoCodeError(null);
+
+                      if (appliedPromoCode && appliedPromoCode.code !== nextNormalizedCode) {
+                        setAppliedPromoCode(null);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => void handleApplyPromoCode()}
+                    disabled={promoCodeLoading || normalizedPromoCode.length === 0}
+                  >
+                    {promoCodeLoading ? "Applying..." : "Apply"}
+                  </Button>
+                  {appliedPromoCode && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleRemovePromoCode}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                {appliedPromoCode && (
+                  <Alert>
+                    <AlertTitle>Promo code applied</AlertTitle>
+                    <AlertDescription>
+                      {appliedPromoCode.code} gives you ${formatMoney(appliedPromoCode.discountAmount)} off.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {promoCodeError && (
+                  <Alert variant="destructive">
+                    <AlertTitle>Promo code error</AlertTitle>
+                    <AlertDescription>{promoCodeError}</AlertDescription>
+                  </Alert>
+                )}
               </div>
               <div className="mt-4 space-y-3 rounded-lg border border-border/70 p-4">
                 <div className="text-sm font-medium">Bonus points</div>
@@ -709,6 +825,12 @@ export default function CheckoutPage() {
                 </div>
               ))}
               <Separator />
+              {appliedPromoCode && (
+                <div className="flex items-center justify-between text-sm text-emerald-700">
+                  <span>Promo discount</span>
+                  <span>-${formatMoney(promoDiscountAmount)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
                 <span className="text-emerald-700">Included</span>
