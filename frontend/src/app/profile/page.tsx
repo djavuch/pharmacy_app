@@ -29,6 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { BonusTab } from "./_components/bonus-tab";
 import { WishlistTab } from "./_components/wishlist-tab";
 import {
   CalendarDays,
@@ -512,11 +513,12 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <Tabs defaultValue="profile" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-2 lg:grid-cols-5">
                 <TabsTrigger value="profile">Personal info</TabsTrigger>
                 <TabsTrigger value="security">Password</TabsTrigger>
                 <TabsTrigger value="addresses">Addresses</TabsTrigger>
                 <TabsTrigger value="wishlist">Wishlist</TabsTrigger>
+                <TabsTrigger value="bonuses">Bonuses</TabsTrigger>
               </TabsList>
 
               <TabsContent value="profile" className="space-y-4 pt-4">
@@ -879,6 +881,8 @@ export default function ProfilePage() {
                   void handleRemoveWishlistItem(productId);
                 }}
               />
+
+              <BonusTab />
             </Tabs>
           </CardContent>
         </Card>
