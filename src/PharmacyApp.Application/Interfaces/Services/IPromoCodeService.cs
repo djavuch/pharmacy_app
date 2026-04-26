@@ -16,4 +16,5 @@ public interface IPromoCodeService
     Task<PromoCodeValidationResultDto> ValidatePromoCodeAsync(PromoCodeValidationResults validationResults);
     Task<Result> ActivatePromoCodeAsync(Guid promoCodeId);
     Task<Result> DeactivatePromoCodeAsync(Guid promoCodeId);
+    Task RefreshPromoCodeUsageCacheAsync(Guid promoCodeId, string? code = null);
 }

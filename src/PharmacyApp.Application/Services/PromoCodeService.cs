@@ -167,6 +167,17 @@ public class PromoCodeService : IPromoCodeService
         return Result.Success();
     }
 
+    public async Task RefreshPromoCodeUsageCacheAsync(Guid promoCodeId, string? code = null)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            await InvalidatePromoCodeCachesAsync(promoCodeId);
+            return;
+        }
+
+        await InvalidatePromoCodeCachesAsync(promoCodeId, code);
+    }
+
     public async Task<PromoCodeValidationResultDto> ValidatePromoCodeAsync(PromoCodeValidationResults validationResults)
     {
         var promoCode = await _unitOfWork.PromoCodes.GetByCodeAsync(validationResults.Code);

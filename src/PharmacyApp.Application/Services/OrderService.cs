@@ -288,6 +288,13 @@ public class OrderService : IOrderService
 
                     await transaction.CommitAsync();
 
+                    if (order.PromoCodeId.HasValue)
+                    {
+                        await _promoCodeService.RefreshPromoCodeUsageCacheAsync(
+                            order.PromoCodeId.Value,
+                            order.AppliedPromoCode);
+                    }
+
                     await _orderEmailNotifier.SendOrderConfirmationEmailAsync(order.Id);
 
                     return Result<OrderDetailsDto>.Success(order.ToOrderResponseDto());
@@ -316,6 +323,8 @@ public class OrderService : IOrderService
     public async Task<Result> UpdateOrderAsync(int orderId, UpdateOrderDto updateOrderDto)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        Guid? invalidatedPromoCodeId = null;
+        string? invalidatedPromoCode = null;
 
         try
         {
@@ -403,7 +412,13 @@ public class OrderService : IOrderService
                 }
                 else
                 {
-                    await RollbackPromoCodeUsageIfAnyAsync(order);
+                    var usageRolledBack = await RollbackPromoCodeUsageIfAnyAsync(order);
+                    if (usageRolledBack)
+                    {
+                        invalidatedPromoCodeId = order.PromoCodeId;
+                        invalidatedPromoCode = order.AppliedPromoCode;
+                    }
+
                     order.RemovePromoCode();
                 }
             }
@@ -417,6 +432,13 @@ public class OrderService : IOrderService
             await _unitOfWork.SaveChangesAsync();
 
             await transaction.CommitAsync();
+
+            if (invalidatedPromoCodeId.HasValue)
+            {
+                await _promoCodeService.RefreshPromoCodeUsageCacheAsync(
+                    invalidatedPromoCodeId.Value,
+                    invalidatedPromoCode);
+            }
 
             await _orderEmailNotifier.SendOrderCompositionChangeEmailAsync(order.Id);
 
@@ -437,6 +459,8 @@ public class OrderService : IOrderService
     public async Task<Result> CancelOrderAsync(int orderId, string userId, bool isStaff)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        Guid? invalidatedPromoCodeId = null;
+        string? invalidatedPromoCode = null;
 
         try
         {
@@ -458,7 +482,12 @@ public class OrderService : IOrderService
                 return restoreStockResult;
             }
 
-            await RollbackPromoCodeUsageIfAnyAsync(order);
+            var usageRolledBack = await RollbackPromoCodeUsageIfAnyAsync(order);
+            if (usageRolledBack)
+            {
+                invalidatedPromoCodeId = order.PromoCodeId;
+                invalidatedPromoCode = order.AppliedPromoCode;
+            }
 
             await _bonusService.ReverseOrderBonusesAsync(order.UserId, order.Id);
 
@@ -468,6 +497,13 @@ public class OrderService : IOrderService
             await _unitOfWork.SaveChangesAsync();
 
             await transaction.CommitAsync();
+
+            if (invalidatedPromoCodeId.HasValue)
+            {
+                await _promoCodeService.RefreshPromoCodeUsageCacheAsync(
+                    invalidatedPromoCodeId.Value,
+                    invalidatedPromoCode);
+            }
 
             await _orderEmailNotifier.SendOrderCancellationEmailAsync(order.Id);
 
@@ -488,6 +524,8 @@ public class OrderService : IOrderService
     public async Task<Result> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusDto updateOrderStatusDto)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+        Guid? invalidatedPromoCodeId = null;
+        string? invalidatedPromoCode = null;
 
         try
         {
@@ -525,7 +563,13 @@ public class OrderService : IOrderService
                     return restoreStockResult;
                 }
 
-                await RollbackPromoCodeUsageIfAnyAsync(order);
+                var usageRolledBack = await RollbackPromoCodeUsageIfAnyAsync(order);
+                if (usageRolledBack)
+                {
+                    invalidatedPromoCodeId = order.PromoCodeId;
+                    invalidatedPromoCode = order.AppliedPromoCode;
+                }
+
                 await _bonusService.ReverseOrderBonusesAsync(order.UserId, order.Id);
             }
 
@@ -534,6 +578,13 @@ public class OrderService : IOrderService
             await _unitOfWork.SaveChangesAsync();
 
             await transaction.CommitAsync();
+
+            if (invalidatedPromoCodeId.HasValue)
+            {
+                await _promoCodeService.RefreshPromoCodeUsageCacheAsync(
+                    invalidatedPromoCodeId.Value,
+                    invalidatedPromoCode);
+            }
 
             await _orderEmailNotifier.SendOrderStatusUpdateEmailAsync(order.Id, oldStatus.ToString(), newStatus.ToString());
 
@@ -571,17 +622,20 @@ public class OrderService : IOrderService
         return Result.Success();
     }
 
-    private async Task RollbackPromoCodeUsageIfAnyAsync(Order order)
+    private async Task<bool> RollbackPromoCodeUsageIfAnyAsync(Order order)
     {
         if (!order.PromoCodeId.HasValue)
-            return;
+            return false;
 
         var removed = await _unitOfWork.PromoCodes.RemoveUsageByOrderIdAsync(order.Id);
 
         if (removed > 0)
         {
             await _unitOfWork.PromoCodes.DecrementUsageAsync(order.PromoCodeId.Value);
+            return true;
         }
+
+        return false;
     }
 
     private async Task<Dictionary<int, decimal>> BuildDiscountedPriceMapAsync(IEnumerable<Product> products)
