@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Domain.Entities.Bonus;
 using PharmacyApp.Infrastructure.Data;
@@ -47,15 +48,15 @@ public class BonusRepository : IBonusRepository
         return Task.CompletedTask;
     }
 
-    public async Task<IEnumerable<BonusTransaction>> GetTransactionsAsync(
-        string userId, int pageIndex, int pageSize)
+    public async Task<PaginatedList<BonusTransaction>> GetTransactionsAsync(
+        string userId,
+        QueryParams queryParams)
     {
-        return await _dbContext.BonusTransactions
+        var query = _dbContext.BonusTransactions
             .Where(t => t.BonusAccount.UserId == userId)
-            .OrderByDescending(t => t.CreatedAt)
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+            .OrderByDescending(t => t.CreatedAt);
+
+        return await PaginatedList<BonusTransaction>.CreateAsync(query, queryParams);
     }
 
     public async Task<IEnumerable<BonusTransaction>> GetTransactionsByOrderIdAsync(int orderId)

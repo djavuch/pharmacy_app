@@ -559,13 +559,15 @@ export const adminBonusApi = {
   getAccount: (userId: string) =>
     request<BonusAccountDto>(`/admin/bonus/accounts/${encodeURIComponent(userId)}`, "GET", undefined, true),
 
-  getTransactions: (userId: string, pageIndex = 1, pageSize = 20) =>
-    request<BonusTransactionDto[]>(
-      `/admin/bonus/accounts/${encodeURIComponent(userId)}/transactions?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+  getTransactions: (userId: string, params?: QueryParams) => {
+    const qs = buildQueryString(params);
+    return request<PaginatedResponse<BonusTransactionDto>>(
+      `/admin/bonus/accounts/${encodeURIComponent(userId)}/transactions${qs}`,
       "GET",
       undefined,
       true,
-    ),
+    );
+  },
 
   adjust: (userId: string, dto: AdjustBonusDto) =>
     request<BonusAccountDto>(
@@ -593,13 +595,15 @@ export const bonusApi = {
   getAccount: () =>
     request<BonusAccountDto>("/bonus/account", "GET", undefined, true),
 
-  getTransactions: (pageIndex = 1, pageSize = 20) =>
-    request<BonusTransactionDto[]>(
-      `/bonus/transactions?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+  getTransactions: (params?: QueryParams) => {
+    const qs = buildQueryString(params);
+    return request<PaginatedResponse<BonusTransactionDto>>(
+      `/bonus/transactions${qs}`,
       "GET",
       undefined,
       true,
-    ),
+    );
+  },
 
   getSettings: () =>
     request<BonusSettingsDto>("/bonus/settings", "GET"),

@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Interfaces.Services;
 using System.Security.Claims;
 
@@ -30,12 +31,12 @@ public class BonusController : ControllerBase
 
     // Transaction history for the current user
     [HttpGet("transactions")]
-    public async Task<IActionResult> GetTransactions(int pageIndex = 1,  int pageSize = 10)
+    public async Task<IActionResult> GetTransactions([FromQuery] QueryParams queryParams)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-        return Ok(await _bonusService.GetTransactionsAsync(userId, pageIndex, pageSize));
+        return Ok(await _bonusService.GetTransactionsAsync(userId, queryParams));
     }
 
     // Get current bonus settings

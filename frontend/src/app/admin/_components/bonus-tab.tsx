@@ -79,7 +79,8 @@ export function BonusTab() {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
   const [transactionsPage, setTransactionsPage] = useState(1);
-  const [transactionsHasNext, setTransactionsHasNext] = useState(false);
+  const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
+  const [transactionsTotalCount, setTransactionsTotalCount] = useState(0);
 
   const [adjustPoints, setAdjustPoints] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
@@ -141,21 +142,26 @@ export function BonusTab() {
     try {
       const [account, transactionItems] = await Promise.all([
         adminBonusApi.getAccount(userId),
-        adminBonusApi.getTransactions(userId, page, transactionPageSize),
+        adminBonusApi.getTransactions(userId, {
+          pageIndex: page,
+          pageSize: transactionPageSize,
+        }),
       ]);
 
       setAccountBalance(account.balance);
       setAccountUpdatedAt(account.updatedAt);
-      setTransactions(transactionItems);
-      setTransactionsPage(page);
-      setTransactionsHasNext(transactionItems.length === transactionPageSize);
+      setTransactions(transactionItems.items ?? []);
+      setTransactionsPage(transactionItems.pageIndex ?? page);
+      setTransactionsTotalPages(transactionItems.totalPages ?? 1);
+      setTransactionsTotalCount(transactionItems.totalCount ?? 0);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to load bonus account data.";
       setAccountBalance(null);
       setAccountUpdatedAt(null);
       setTransactions([]);
       setTransactionsPage(page);
-      setTransactionsHasNext(false);
+      setTransactionsTotalPages(1);
+      setTransactionsTotalCount(0);
       setAccountError(message);
       setTransactionsError(message);
     } finally {
@@ -170,7 +176,8 @@ export function BonusTab() {
       setAccountUpdatedAt(null);
       setTransactions([]);
       setTransactionsPage(1);
-      setTransactionsHasNext(false);
+      setTransactionsTotalPages(1);
+      setTransactionsTotalCount(0);
       setAccountError(null);
       setTransactionsError(null);
       return;
@@ -500,7 +507,7 @@ export function BonusTab() {
                 </div>
               )}
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="rounded-md border p-3">
                   <p className="text-xs text-muted-foreground">Current balance</p>
                   <p className="text-xl font-semibold">
@@ -516,7 +523,13 @@ export function BonusTab() {
                 <div className="rounded-md border p-3">
                   <p className="text-xs text-muted-foreground">Transactions page</p>
                   <p className="text-sm font-medium">
-                    {transactionsPage}
+                    {transactionsPage} / {transactionsTotalPages}
+                  </p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-xs text-muted-foreground">Total transactions</p>
+                  <p className="text-sm font-medium">
+                    {transactionsTotalCount}
                   </p>
                 </div>
               </div>
@@ -598,31 +611,35 @@ export function BonusTab() {
                     </p>
                   )}
 
-                  <div className="flex items-center justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={transactionsPage <= 1 || transactionsLoading || !selectedUser}
-                      onClick={() => {
-                        if (!selectedUser || transactionsPage <= 1) return;
-                        void fetchAccountAndTransactions(selectedUser.id, transactionsPage - 1);
-                      }}
-                    >
-                      Previous
-                    </Button>
-                    <span className="text-sm text-muted-foreground">{transactionsPage}</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!transactionsHasNext || transactionsLoading || !selectedUser}
-                      onClick={() => {
-                        if (!selectedUser || !transactionsHasNext) return;
-                        void fetchAccountAndTransactions(selectedUser.id, transactionsPage + 1);
-                      }}
-                    >
-                      Next
-                    </Button>
-                  </div>
+                  {transactionsTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={transactionsPage <= 1 || transactionsLoading || !selectedUser}
+                        onClick={() => {
+                          if (!selectedUser || transactionsPage <= 1) return;
+                          void fetchAccountAndTransactions(selectedUser.id, transactionsPage - 1);
+                        }}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        {transactionsPage} / {transactionsTotalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={transactionsPage >= transactionsTotalPages || transactionsLoading || !selectedUser}
+                        onClick={() => {
+                          if (!selectedUser || transactionsPage >= transactionsTotalPages) return;
+                          void fetchAccountAndTransactions(selectedUser.id, transactionsPage + 1);
+                        }}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
             </div>

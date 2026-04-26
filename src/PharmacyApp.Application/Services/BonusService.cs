@@ -1,5 +1,6 @@
-﻿using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.Hybrid;
 using PharmacyApp.Application.Common;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Contracts.Bonus;
 using PharmacyApp.Application.Contracts.Bonus.Admin;
 using PharmacyApp.Application.Interfaces;
@@ -31,11 +32,26 @@ public class BonusService : IBonusService
         return account.ToBonusAccountDto();
     }
 
-    public async Task<IEnumerable<BonusTransactionDto>> GetTransactionsAsync(
-        string userId, int pageIndex = 1, int pageSize = 20)
+    public async Task<PaginatedList<BonusTransactionDto>> GetTransactionsAsync(
+        string userId,
+        QueryParams queryParams)
     {
-        var transactions = await _unitOfWork.Bonuses.GetTransactionsAsync(userId, pageIndex, pageSize);
-        return transactions.Select(t => t.ToBonusTransactionDto());
+        var normalizedQuery = queryParams with
+        {
+            PageIndex = Math.Max(1, queryParams.PageIndex),
+            PageSize = Math.Clamp(queryParams.PageSize, 1, 100)
+        };
+
+        var transactions = await _unitOfWork.Bonuses.GetTransactionsAsync(userId, normalizedQuery);
+
+        return new PaginatedList<BonusTransactionDto>
+        {
+            Items = transactions.Items.Select(t => t.ToBonusTransactionDto()).ToList(),
+            TotalCount = transactions.TotalCount,
+            PageIndex = transactions.PageIndex,
+            PageSize = transactions.PageSize,
+            TotalPages = transactions.TotalPages
+        };
     }
 
     public async Task<decimal> EarnPointsAsync(string userId, int orderId, decimal paidAmount)
@@ -66,7 +82,7 @@ public class BonusService : IBonusService
     {
         if (pointsToRedeem <= 0)
             return Result<decimal>.BadRequest("Points to redeem must be greater than 0.");
-        
+
         if (orderId <= 0)
             return Result<decimal>.BadRequest("Order ID must be greater than 0 for bonus redemption.");
 
@@ -118,7 +134,7 @@ public class BonusService : IBonusService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    // Admin: accounts 
+    // Admin: accounts
 
     public async Task<IEnumerable<BonusAccountDto>> GetAllAccountsAsync(int pageIndex = 1, int pageSize = 20)
     {
@@ -172,9 +188,9 @@ public class BonusService : IBonusService
     {
         var account = await _unitOfWork.Bonuses.GetByUserIdAsync(userId);
         if (account is null)
-        { 
+        {
             var user = await _unitOfWork.Users.GetByIdAsync(userId);
-            if (user is null) 
+            if (user is null)
                 throw new NotFoundException("User not found.");
 
             account = new BonusAccount(Guid.NewGuid(), userId, 0);

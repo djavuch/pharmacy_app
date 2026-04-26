@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
+using PharmacyApp.Application.Common.Pagination;
 using PharmacyApp.Application.Contracts.Bonus.Admin;
 using PharmacyApp.Application.Interfaces.Services;
 
@@ -31,10 +32,9 @@ public class AdminBonusController : ControllerBase
     [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> GetUserTransactions(
         string userId,
-        [FromQuery] int pageIndex = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] QueryParams queryParams)
     {
-        return Ok(await _bonusService.GetTransactionsAsync(userId, pageIndex, pageSize));
+        return Ok(await _bonusService.GetTransactionsAsync(userId, queryParams));
     }
 
     // Manual adjustment bonus points for a user
