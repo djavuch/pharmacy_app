@@ -122,6 +122,7 @@ export default function RegisterPage() {
               <Input
                 id="dateOfBirth"
                 type="date"
+                lang="en-US"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
                 required
