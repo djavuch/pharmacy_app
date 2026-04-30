@@ -18,6 +18,8 @@ public class EmailSenderService : IEmailSenderService
 
     public async Task SendEmailAsync(EmailRequestDto request, CancellationToken ct)
     {
+        ValidateEmailOptions();
+
         var fromEmail = string.IsNullOrWhiteSpace(_emailOptions.FromEmail)
             ? _emailOptions.SmtpUser
             : _emailOptions.FromEmail;
@@ -63,5 +65,31 @@ public class EmailSenderService : IEmailSenderService
 
         await smtp.SendAsync(email);
         await smtp.DisconnectAsync(true, ct);
+    }
+
+    private void ValidateEmailOptions()
+    {
+        if (string.IsNullOrWhiteSpace(_emailOptions.SmtpServer))
+        {
+            throw new InvalidOperationException("EmailConfiguration:SmtpServer must be set.");
+        }
+
+        if (_emailOptions.SmtpPort <= 0)
+        {
+            throw new InvalidOperationException("EmailConfiguration:SmtpPort must be set to a valid port.");
+        }
+
+        if (_emailOptions.UseAuthentication)
+        {
+            if (string.IsNullOrWhiteSpace(_emailOptions.SmtpUser))
+            {
+                throw new InvalidOperationException("EmailConfiguration:SmtpUser must be set when SMTP authentication is enabled.");
+            }
+
+            if (string.IsNullOrWhiteSpace(_emailOptions.SmtpPassword))
+            {
+                throw new InvalidOperationException("EmailConfiguration:SmtpPassword must be set when SMTP authentication is enabled.");
+            }
+        }
     }
 }
