@@ -21,18 +21,18 @@ public class AuthService : IAuthService
     private readonly IJwtTokenProvider _jwtTokenProvider;
     private readonly IClaimsService _claimsService;
     private readonly IBackgroundTaskQueue _taskQueue;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
 
 
     public AuthService(IUnitOfWorkRepository unitOfWork, IJwtTokenProvider jwtTokenProvider, 
         IClaimsService claimsService, IBackgroundTaskQueue taskQueue, 
-        IServiceProvider serviceProvider)
+        IServiceScopeFactory serviceScopeFactory)
     {
         _unitOfWork = unitOfWork;
         _jwtTokenProvider = jwtTokenProvider;
         _claimsService = claimsService;
         _taskQueue = taskQueue;
-        _serviceProvider = serviceProvider;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
     public async Task<Result<UserProfileDto>> UserRegisterAsync(UserRegistrationDto userRegistrationDto, string scheme, string host)
@@ -71,7 +71,7 @@ public class AuthService : IAuthService
 
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = _serviceScopeFactory.CreateScope();
             var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
             await emailService.SendEmailForRegisterConfirmationAsync(newUser, token, scheme, host, ct);
         });
@@ -136,7 +136,7 @@ public class AuthService : IAuthService
 
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = _serviceScopeFactory.CreateScope();
             var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
             await emailService.SendEmailForRegisterConfirmationAsync(user, token, scheme, host, ct);
         });
@@ -157,7 +157,7 @@ public class AuthService : IAuthService
 
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = _serviceScopeFactory.CreateScope();
             var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
             await emailService.SendEmailForResetPasswordAsync(user, token, scheme, host, ct);
         });
