@@ -1,13 +1,16 @@
 # PharmacyApp
 
-PharmacyApp is a pharmacy management platform with an **ASP.NET Core 9 backend** and a **Next.js frontend** in one repository. The project includes customer flows, account management, promotions, bonus loyalty features, and an admin panel for operational work.
+Backend-focused pharmacy management platform built as a personal pet project to practice real-world .NET development.
+
+The backend is built with ASP.NET Core Web API, Entity Framework Core, PostgreSQL, ASP.NET Core Identity, JWT authentication, and Clean Architecture. A supporting Next.js/React frontend is included to demonstrate the main application flows.
 
 ## Project Overview
 
-The repository contains two main parts:
+PharmacyApp simulates a pharmacy management system with customer-facing features and admin functionality.
 
-- **Backend API**: authentication, catalog, cart, orders, discounts, bonus program, reviews, email notifications, and admin operations
-- **Frontend app**: catalog browsing, product pages, cart, checkout, profile, orders, promotions, content pages, and admin dashboard
+The backend API includes authentication, authorization, role-based access control, product catalog, shopping cart, order processing, discounts, promo codes, bonus loyalty system, reviews, email notifications, and admin operations.
+
+The frontend provides an interface for catalog browsing, product details, cart, checkout, user profile, orders, promotions, content pages, and admin dashboard.
 
 ## Demo
 
@@ -15,38 +18,34 @@ The current demo is available at:
 
 - https://pharmacyfrontend-production-d550.up.railway.app/
 
+## My Focus
+
+The main focus of this project was backend development with .NET:
+
+- REST API development with ASP.NET Core Web API
+- Clean Architecture and separation of responsibilities
+- Entity Framework Core with PostgreSQL
+- Authentication and authorization with JWT and ASP.NET Core Identity
+- Role-based access control
+- Business logic for products, carts, orders, discounts, promo codes, and bonus points
+- Admin-related functionality
+- Docker-based local database setup
+
+The frontend was added as a supporting UI to make the project easier to present.
+
 ## Key Features
 
-### Authentication & Authorization
-- JWT-based authentication with refresh token support
+- JWT authentication with refresh tokens
 - ASP.NET Core Identity integration
 - Role-based access control for Admin, Pharmacist, Manager, and Customer
-- Email confirmation, password reset, and password change flows
-- Automatic admin bootstrap for first-time setup
-
-### Shopping & Orders
-- Shopping cart for authenticated users
-- Cart refresh after sign-in and sign-out
-- Full order lifecycle from checkout to cancellation
-- Order status tracking and email notifications
-- Optimistic concurrency via `RowVersion`
-
-### Pricing, Promotions, Loyalty
-- Category-level and product-level discounts
-- Promo codes with activation and validation
+- Product catalog with categories, stock tracking, reviews, and ratings
+- Shopping cart and checkout flow
+- Order lifecycle and status tracking
+- Category and product discounts
+- Promo code validation logic
 - Bonus points accrual and redemption
-- Bonus transaction history and configurable settings
-
-### Catalog & Content
-- Product catalog with categories and stock tracking
-- Reviews and ratings
-- Wishlist and saved addresses
-- Promotion pages and editable content pages
-
-### Administration
-- Admin dashboard
-- Product, category, discount, promo code, review, and user management
-- Bonus settings and content page management
+- Email confirmation, password reset, and order notifications
+- Admin dashboard for managing products, categories, discounts, promo codes, reviews, users, and content pages
 
 ## Technology Stack
 
@@ -54,7 +53,7 @@ The current demo is available at:
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS 4, Zustand
 - **Architecture**: Clean Architecture on the backend, App Router + layered frontend modules
 - **ORM**: Entity Framework Core with PostgreSQL
-- **Infrastructure**: Docker, Docker Compose, MailKit, FluentValidation
+- **Infrastructure**: Docker, MailKit, FluentValidation
 
 ## Project Structure
 
@@ -69,27 +68,72 @@ The current demo is available at:
 - `frontend/src/entities`: domain-oriented UI and data slices
 - `frontend/src/shared`: API client, shared UI, stores, config, and types
 
-## Getting Started
+## Architecture
 
-### 1. Prerequisites
+The backend follows Clean Architecture principles:
 
-- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- [Node.js LTS](https://nodejs.org/)
-- [PostgreSQL](https://www.postgresql.org/download/) or Docker
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) for containerized runs
-
-### 2. Clone the repository
-
-```bash
-git clone https://github.com/djavuch/PharmacyApp.git
-cd PharmacyApp
+```text
+WebApi / Presentation
+        ↓
+Application
+        ↓
+Domain
+        ↑
+Infrastructure
 ```
 
-### 3. Configure the backend
+Main layers:
 
-Set local development settings in `src/PharmacyApp.WebApi/appsettings.Development.json` or via User Secrets.
+- **Domain** — core entities and business rules
+- **Application** — services, DTOs, interfaces, mappings, and validation
+- **Infrastructure** — EF Core, repositories, migrations, and external integrations
+- **Presentation** — API controllers
+- **WebApi** — application host, middleware, dependency injection, and configuration
 
-Database connection string:
+## Getting Started
+
+### Prerequisites
+
+- .NET 9 SDK
+- Node.js LTS
+- Docker Desktop
+
+### Clone the repository
+
+```bash
+git clone https://github.com/djavuch/pharmacy_app.git
+cd pharmacy_app
+```
+
+### Start PostgreSQL with Docker
+
+Create a `.env` file in the repository root:
+
+```env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+POSTGRES_DB=PharmacyAppDb
+PGADMIN_EMAIL=admin@example.com
+PGADMIN_PASSWORD=admin_password
+```
+
+Start PostgreSQL and pgAdmin:
+
+```bash
+docker compose up -d postgresdb pgadmin
+```
+
+pgAdmin:
+
+```text
+http://localhost:5050
+```
+
+### Configure the backend
+
+Set the connection string in `src/PharmacyApp.WebApi/appsettings.Development.json` or use .NET User Secrets.
+
+Example:
 
 ```json
 {
@@ -99,63 +143,36 @@ Database connection string:
 }
 ```
 
-Admin bootstrap for the first run:
-
-```json
-{
-  "AdminBootstrap": {
-    "Enabled": true,
-    "Email": "admin@pharmacy.com",
-    "Password": "Admin@123456",
-    "FirstName": "System",
-    "LastName": "Administrator"
-  }
-}
-```
-
-JWT settings:
-
-```json
-{
-  "JwtSettings": {
-    "SecretKey": "your-super-secret-key-at-least-32-characters-long-for-production",
-    "Issuer": "PharmacyApp",
-    "Audience": "PharmacyAppUsers",
-    "ExpirationMinutes": 60
-  }
-}
-```
-
-### 4. Configure the frontend
-
-Create `frontend/.env.local` from `frontend/.env.example`:
-
-```env
-NEXT_PUBLIC_API_URL=https://localhost:7072
-```
-
-Frontend notes:
-
-- Do not add `/api` to `NEXT_PUBLIC_API_URL`. The client calls routes such as `/account/login`, `/store/products`, and `/admin/products` directly.
-- The backend CORS config allows `https://localhost:3000` by default.
-- The frontend dev script uses HTTPS via `next dev --experimental-https`.
-
-### 5. Run the application locally
-
-Apply backend migrations:
+### Apply migrations
 
 ```bash
-cd src/PharmacyApp.WebApi
-dotnet ef database update --project ../PharmacyApp.Infrastructure
+dotnet ef database update \
+  --project src/PharmacyApp.Infrastructure \
+  --startup-project src/PharmacyApp.WebApi
 ```
 
-Run the backend API:
+### Run the backend
 
 ```bash
 dotnet run --project src/PharmacyApp.WebApi
 ```
 
-Run the frontend:
+API URLs:
+
+```text
+https://localhost:7072
+http://localhost:5184
+```
+
+### Run the frontend
+
+Create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=https://localhost:7072
+```
+
+Then run:
 
 ```bash
 cd frontend
@@ -163,33 +180,30 @@ npm install
 npm run dev
 ```
 
-Development URLs:
-
-- API HTTPS: `https://localhost:7072`
-- API HTTP: `http://localhost:5184`
-- Frontend: `https://localhost:3000`
-
-### 6. Test the bootstrap admin account
+Frontend URL:
 
 ```text
-email: admin@pharmacy.com
-password: Admin@123456
+https://localhost:3000
 ```
 
-### 7. Disable admin bootstrap after first run
+## Demo Credentials
 
-Set `AdminBootstrap:Enabled` to `false` after the first successful startup.
+For local development, the application can create an initial admin account during the first startup.
 
-## Frontend Deployment
-
-The frontend can be deployed to any platform that supports Next.js 16. At minimum, set:
-
-```env
-NEXT_PUBLIC_API_URL=https://<your-backend-domain>
+```text
+Email:    admin@pharmacy.com
+Password: Admin@123456
 ```
 
-Deployment notes:
+After the first successful startup, admin bootstrap should be disabled in configuration.
 
-- The backend must allow the deployed frontend origin in `Cors__AllowedOrigins__0`
-- `Frontend__BaseUrl` should match the public frontend domain used in links and emails
-- Keep frontend and backend on HTTPS to avoid mixed-content issues in browsers
+## What I Learned
+
+During this project, I practiced:
+
+- Designing REST APIs with ASP.NET Core Web API
+- Structuring a backend application using Clean Architecture
+- Working with Entity Framework Core and PostgreSQL
+- Implementing authentication, refresh tokens, and role-based authorization
+- Modeling business logic for orders, discounts, promo codes, and bonus points
+- Connecting a frontend UI to a .NET backend API
