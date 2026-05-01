@@ -38,7 +38,10 @@ public class EmailSenderService : IEmailSenderService
 
         email.Body = bodyBuilder.ToMessageBody();
 
-        using var smtp = new MailKit.Net.Smtp.SmtpClient();
+        using var smtp = new MailKit.Net.Smtp.SmtpClient
+        {
+            Timeout = 15000
+        };
 
         _logger.LogInformation(
             "Sending email '{Subject}' to {Recipient} via SMTP server {SmtpServer}:{SmtpPort}.",
