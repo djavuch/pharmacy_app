@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using PharmacyApp.Application.Interfaces.Services; 
 using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Entities;
@@ -22,17 +23,20 @@ public class AuthService : IAuthService
     private readonly IClaimsService _claimsService;
     private readonly IBackgroundTaskQueue _taskQueue;
     private readonly IServiceScopeFactory _serviceScopeFactory;
+    private readonly ILogger<AuthService> _logger;
 
 
     public AuthService(IUnitOfWorkRepository unitOfWork, IJwtTokenProvider jwtTokenProvider, 
         IClaimsService claimsService, IBackgroundTaskQueue taskQueue, 
-        IServiceScopeFactory serviceScopeFactory)
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<AuthService> logger)
     {
         _unitOfWork = unitOfWork;
         _jwtTokenProvider = jwtTokenProvider;
         _claimsService = claimsService;
         _taskQueue = taskQueue;
         _serviceScopeFactory = serviceScopeFactory;
+        _logger = logger;
     }
 
     public async Task<Result<UserProfileDto>> UserRegisterAsync(UserRegistrationDto userRegistrationDto, string scheme, string host)
@@ -68,6 +72,8 @@ public class AuthService : IAuthService
         
 
         var token = await _unitOfWork.Auth.GenerateEmailConfirmationTokenAsync(newUser);
+
+        _logger.LogInformation("Queueing email confirmation message for user {UserId}.", newUser.Id);
 
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
@@ -134,6 +140,8 @@ public class AuthService : IAuthService
         
         var token = await _unitOfWork.Auth.GenerateEmailConfirmationTokenAsync(user);
 
+        _logger.LogInformation("Queueing resent email confirmation message for user {UserId}.", user.Id);
+
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
             using var scope = _serviceScopeFactory.CreateScope();
@@ -150,10 +158,13 @@ public class AuthService : IAuthService
 
         if (user is null)
         {
+            _logger.LogInformation("Password reset requested for non-existing email.");
             return Result<bool>.Success(true, "If the email address was registered, you will receive an email with a link to restore it.");
         }
 
         var token = await _unitOfWork.Auth.GeneratePasswordResetTokenAsync(user);
+
+        _logger.LogInformation("Queueing password reset message for user {UserId}.", user.Id);
 
         await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
         {
