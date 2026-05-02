@@ -1,7 +1,8 @@
-using MailKit.Security;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MimeKit;
 using PharmacyApp.Application.Contracts.Notifications.Email;
 using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Infrastructure.Options;
@@ -10,74 +11,84 @@ namespace PharmacyApp.Infrastructure.Services.Email;
 
 public class EmailSenderService : IEmailSenderService
 {
-    private readonly EmailOptions _emailOptions;
+    private readonly HttpClient _httpClient;
+    private readonly ResendOptions _resendOptions;
     private readonly ILogger<EmailSenderService> _logger;
 
     public EmailSenderService(
-        IOptions<EmailOptions> emailOptions,
+        HttpClient httpClient,
+        IOptions<ResendOptions> resendOptions,
         ILogger<EmailSenderService> logger)
     {
-        _emailOptions = emailOptions.Value;
+        _httpClient = httpClient;
+        _resendOptions = resendOptions.Value;
         _logger = logger;
     }
 
     public async Task SendEmailAsync(EmailRequestDto request, CancellationToken ct)
     {
-        ValidateEmailOptions();
+        ValidateResendOptions();
 
-        var email = new MimeMessage();
-        email.From.Add(new MailboxAddress(_emailOptions.FromName, _emailOptions.SmtpUser));
-        email.To.Add(MailboxAddress.Parse(request.To));
-        email.Subject = request.Subject;
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, _resendOptions.ApiUrl);
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _resendOptions.ApiKey);
+        httpRequest.Content = JsonContent.Create(BuildRequestBody(request));
 
-        var bodyBuilder = new BodyBuilder
+        _logger.LogInformation("Sending email '{Subject}' to {Recipient} via Resend API.", request.Subject, request.To);
+
+        using var response = await _httpClient.SendAsync(httpRequest, ct);
+        if (!response.IsSuccessStatusCode)
         {
-            HtmlBody = request.IsHtml ? request.Body : null,
-            TextBody = request.IsHtml ? null : request.Body
-        };
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            throw new InvalidOperationException(
+                $"Resend API failed with status {(int)response.StatusCode} ({response.StatusCode}): {responseBody}");
+        }
 
-        email.Body = bodyBuilder.ToMessageBody();
-
-        using var smtp = new MailKit.Net.Smtp.SmtpClient
+        if (response.StatusCode is not (HttpStatusCode.OK or HttpStatusCode.Created or HttpStatusCode.Accepted))
         {
-            Timeout = 15000
-        };
+            _logger.LogWarning("Resend API returned unexpected success status {StatusCode}.", response.StatusCode);
+        }
 
-        _logger.LogInformation(
-            "Sending email '{Subject}' to {Recipient} via SMTP server {SmtpServer}:{SmtpPort}.",
-            request.Subject,
-            request.To,
-            _emailOptions.SmtpServer,
-            _emailOptions.SmtpPort);
-
-        await smtp.ConnectAsync(_emailOptions.SmtpServer, _emailOptions.SmtpPort, SecureSocketOptions.StartTls, ct);
-        await smtp.AuthenticateAsync(_emailOptions.SmtpUser, _emailOptions.SmtpPassword, ct);
-        await smtp.SendAsync(email, ct);
-        await smtp.DisconnectAsync(true, ct);
-
-        _logger.LogInformation("Email '{Subject}' to {Recipient} was accepted by SMTP server.", request.Subject, request.To);
+        _logger.LogInformation("Email '{Subject}' to {Recipient} was accepted by Resend API.", request.Subject, request.To);
     }
 
-    private void ValidateEmailOptions()
+    private object BuildRequestBody(EmailRequestDto request)
     {
-        if (string.IsNullOrWhiteSpace(_emailOptions.SmtpServer))
+        var from = string.IsNullOrWhiteSpace(_resendOptions.FromName)
+            ? _resendOptions.FromEmail
+            : $"{_resendOptions.FromName} <{_resendOptions.FromEmail}>";
+
+        return request.IsHtml
+            ? new
+            {
+                from,
+                to = new[] { request.To },
+                subject = request.Subject,
+                html = request.Body
+            }
+            : new
+            {
+                from,
+                to = new[] { request.To },
+                subject = request.Subject,
+                text = request.Body
+            };
+    }
+
+    private void ValidateResendOptions()
+    {
+        if (string.IsNullOrWhiteSpace(_resendOptions.ApiKey))
         {
-            throw new InvalidOperationException("EmailConfiguration:SmtpServer must be set.");
+            throw new InvalidOperationException("Resend:ApiKey must be set.");
         }
 
-        if (_emailOptions.SmtpPort <= 0)
+        if (string.IsNullOrWhiteSpace(_resendOptions.FromEmail))
         {
-            throw new InvalidOperationException("EmailConfiguration:SmtpPort must be set to a valid port.");
+            throw new InvalidOperationException("Resend:FromEmail must be set.");
         }
 
-        if (string.IsNullOrWhiteSpace(_emailOptions.SmtpUser))
+        if (string.IsNullOrWhiteSpace(_resendOptions.ApiUrl))
         {
-            throw new InvalidOperationException("EmailConfiguration:SmtpUser must be set.");
-        }
-
-        if (string.IsNullOrWhiteSpace(_emailOptions.SmtpPassword))
-        {
-            throw new InvalidOperationException("EmailConfiguration:SmtpPassword must be set.");
+            throw new InvalidOperationException("Resend:ApiUrl must be set.");
         }
     }
 }

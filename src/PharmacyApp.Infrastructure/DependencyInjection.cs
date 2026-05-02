@@ -38,7 +38,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString);
         });
 
-        services.Configure<EmailOptions>(configuration.GetSection("EmailConfiguration"));
+        services.Configure<ResendOptions>(configuration.GetSection(ResendOptions.SectionName));
         services.Configure<AdminBootstrapOptions>(configuration.GetSection("AdminBootstrap"));
         services.Configure<FileStorageOptions>(configuration.GetSection(FileStorageOptions.SectionName));
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
@@ -54,7 +54,7 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUnitOfWorkRepository, UnitOfWorkRepository>();
-        services.AddScoped<IEmailSenderService, EmailSenderService>();
+        services.AddHttpClient<IEmailSenderService, EmailSenderService>();
         services.AddScoped<IAccountNotificationSender, AccountNotificationSender>();
         services.AddScoped<IOrderEmailNotifier, OrderEmailNotifier>();
         services.AddScoped<IUserAddressRepository, UserAddressRepository>();
