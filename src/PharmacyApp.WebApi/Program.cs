@@ -52,7 +52,15 @@ app.UseForwardedHeaders();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<PharmacyAppDbContext>();
-    await dbContext.Database.MigrateAsync();
+
+    if (app.Environment.IsEnvironment("Testing"))
+    {
+        await dbContext.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await dbContext.Database.MigrateAsync();
+    }
     
     var roleInitializationService = scope.ServiceProvider.GetRequiredService<IRoleInitializationService>();
     await roleInitializationService.InitializeAllAsync();
@@ -83,3 +91,5 @@ app.MapControllers();
 
 
 app.Run();
+
+public partial class Program;

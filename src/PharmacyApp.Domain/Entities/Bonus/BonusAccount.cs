@@ -68,7 +68,7 @@ public class BonusAccount
         if (orderId <= 0)
             throw new ArgumentException("Order ID must be greater than 0.");
         if (transactions is null)
-            throw new ArgumentNullException(nameof(transactions));
+            throw new ArgumentException("Transactions cannot be null.", nameof(transactions));
 
         var refundTransactions = new List<BonusTransaction>();
 

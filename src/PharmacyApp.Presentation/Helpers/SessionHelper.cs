@@ -6,22 +6,21 @@ public static class SessionHelper
 {
     private const string CartSessionIdKey = "CartSessionId";
     private const string CartSessionOwnerUserIdKey = "CartSessionOwnerUserId";
+    private const string CartSessionIdHeader = "X-Cart-Session-Id";
     private static readonly TimeSpan CartLifeTime = TimeSpan.FromDays(30);
 
     public static string GetOrCreateSessionId(HttpContext httpContext)
     {
-        if (httpContext.Request.Cookies.TryGetValue(CartSessionIdKey, out var existing)
-            && !string.IsNullOrWhiteSpace(existing))
+        var existing = TryGetSessionId(httpContext);
+        if (!string.IsNullOrWhiteSpace(existing))
         {
+            EnsureSessionCookie(httpContext, existing);
             return existing;
         }
 
         var newId = Guid.NewGuid().ToString("N");
 
-        httpContext.Response.Cookies.Append(
-            CartSessionIdKey,
-            newId,
-            CreateCookieOptions(httpContext));
+        EnsureSessionCookie(httpContext, newId);
 
         return newId;
     }
@@ -29,9 +28,15 @@ public static class SessionHelper
     public static string? TryGetSessionId(HttpContext httpContext)
     {
         if (httpContext.Request.Cookies.TryGetValue(CartSessionIdKey, out var existing)
-            && !string.IsNullOrWhiteSpace(existing))
+            && TryNormalizeSessionId(existing, out var cookieSessionId))
         {
-            return existing;
+            return cookieSessionId;
+        }
+
+        if (httpContext.Request.Headers.TryGetValue(CartSessionIdHeader, out var headerValues)
+            && TryNormalizeSessionId(headerValues.FirstOrDefault(), out var headerSessionId))
+        {
+            return headerSessionId;
         }
 
         return null;
@@ -88,6 +93,28 @@ public static class SessionHelper
             Path = "/",
             MaxAge = CartLifeTime
         };
+    }
+
+    private static void EnsureSessionCookie(HttpContext httpContext, string sessionId)
+    {
+        httpContext.Response.Cookies.Append(
+            CartSessionIdKey,
+            sessionId,
+            CreateCookieOptions(httpContext));
+    }
+
+    private static bool TryNormalizeSessionId(string? value, out string sessionId)
+    {
+        sessionId = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        if (!Guid.TryParseExact(value.Trim(), "N", out var parsed) || parsed == Guid.Empty)
+            return false;
+
+        sessionId = parsed.ToString("N");
+        return true;
     }
 
     private static bool IsSecureRequest(HttpContext httpContext)

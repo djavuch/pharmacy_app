@@ -50,6 +50,69 @@
 const DEFAULT_API_URL = "https://localhost:7072";
 // Backend routes are mounted at root (e.g. /account/login), so do not include "/api" here.
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL).trim().replace(/\/+$/, "");
+const CART_SESSION_STORAGE_KEY = "cartSessionId";
+const CART_SESSION_HEADER = "X-Cart-Session-Id";
+
+function normalizeCartSessionId(value: string | null): string | null {
+  const normalized = value?.trim().replaceAll("-", "").toLowerCase() ?? "";
+  return /^[0-9a-f]{32}$/.test(normalized) && !/^0+$/.test(normalized)
+    ? normalized
+    : null;
+}
+
+function createCartSessionId(): string {
+  const browserCrypto = globalThis.crypto;
+
+  if (browserCrypto) {
+    if (browserCrypto.randomUUID) {
+      return browserCrypto.randomUUID().replaceAll("-", "");
+    }
+
+    const bytes = new Uint8Array(16);
+    browserCrypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+}
+
+function getStoredCartSessionId(): string | null {
+  if (typeof window === "undefined") return null;
+  return normalizeCartSessionId(localStorage.getItem(CART_SESSION_STORAGE_KEY));
+}
+
+function getOrCreateCartSessionId(): string | null {
+  if (typeof window === "undefined") return null;
+
+  const existing = getStoredCartSessionId();
+  if (existing) return existing;
+
+  const sessionId = createCartSessionId();
+  localStorage.setItem(CART_SESSION_STORAGE_KEY, sessionId);
+  return sessionId;
+}
+
+function getCartSessionIdForEndpoint(endpoint: string, isAuthenticatedRequest: boolean): string | null {
+  if (endpoint.startsWith("/cart")) {
+    if (isAuthenticatedRequest) return null;
+    return getOrCreateCartSessionId();
+  }
+
+  if (
+    endpoint.startsWith("/account/login") ||
+    endpoint.startsWith("/account/register") ||
+    endpoint.startsWith("/account/logout")
+  ) {
+    return getStoredCartSessionId();
+  }
+
+  return null;
+}
+
+function clearCartSessionId(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(CART_SESSION_STORAGE_KEY);
+}
 
 function extractApiErrorMessage(errorBody: unknown, status: number): string {
   if (typeof errorBody !== "object" || errorBody === null) {
@@ -103,23 +166,33 @@ function clearTokens(): void {
   localStorage.removeItem("refreshToken");
 }
 
-async function buildHeaders(requireAuth = false, hasJsonBody = false): Promise<Record<string, string>> {
+async function buildHeaders(
+  endpoint: string,
+  requireAuth = false,
+  hasJsonBody = false
+): Promise<Record<string, string>> {
   const headers: Record<string, string> = {};
   if (hasJsonBody) {
     headers["Content-Type"] = "application/json";
   }
+  let hasAccessToken = false;
   if (requireAuth) {
     const token = await getAccessToken();
     if (token) {
+      hasAccessToken = true;
       headers["Authorization"] = `Bearer ${token}`;
     }
+  }
+  const cartSessionId = getCartSessionIdForEndpoint(endpoint, hasAccessToken);
+  if (cartSessionId) {
+    headers[CART_SESSION_HEADER] = cartSessionId;
   }
   return headers;
 }
 
 async function request<T>(endpoint: string, method: string, body?: unknown, requireAuth = false): Promise<T> {
   const hasJsonBody = body !== undefined && body !== null;
-  const headers = await buildHeaders(requireAuth, hasJsonBody);
+  const headers = await buildHeaders(endpoint, requireAuth, hasJsonBody);
 
   const response = await fetch(`${API_URL}${endpoint}`, {
     method,
@@ -625,4 +698,4 @@ function buildQueryString(params?: QueryParams): string {
   return qs ? `?${qs}` : "";
 }
 
-export { setTokens, clearTokens, getAccessToken };
+export { setTokens, clearTokens, getAccessToken, clearCartSessionId };

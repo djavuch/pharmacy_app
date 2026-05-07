@@ -1,6 +1,13 @@
 ﻿import { create } from "zustand";
 import { UserProfileDto } from "@/shared/types";
-import { accountApi, userApi, setTokens, clearTokens, getAccessToken } from "@/shared/api";
+import {
+  accountApi,
+  userApi,
+  setTokens,
+  clearTokens,
+  clearCartSessionId,
+  getAccessToken,
+} from "@/shared/api";
 import { useCartStore } from "@/shared/stores/cart";
 
 interface AuthState {
@@ -43,6 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error(result.message || "Login failed");
       }
       setTokens(result.token, result.refreshToken);
+      clearCartSessionId();
       set({ isLoading: false });
 
       await get().loadProfile();
@@ -65,6 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         dateOfBirth,
         phoneNumber,
       });
+      clearCartSessionId();
       set({ isLoading: false });
     } catch (error) {
       set({ isLoading: false });
@@ -99,6 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     }
     clearTokens();
+    clearCartSessionId();
     set({ profile: null, isAuthenticated: false });
     await useCartStore.getState().loadCart(true);
   },
