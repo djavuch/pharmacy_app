@@ -1,0 +1,27 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="README.MD" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/PharmacyApp.Application/PharmacyApp.Application.csproj" />
+    <Project Path="src/PharmacyApp.Domain/PharmacyApp.Domain.csproj" />
+    <Project Path="src/PharmacyApp.Infrastructure/PharmacyApp.Infrastructure.csproj" />
+    <Project Path="src/PharmacyApp.Presentation/PharmacyApp.Presentation.csproj" />
+    <Project Path="src/PharmacyApp.WebApi/PharmacyApp.WebApi.csproj">
+      <BuildDependency Project="src/PharmacyApp.Presentation/PharmacyApp.Presentation.csproj" />
+    </Project>
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PharmacyApp.IntegrationTests/PharmacyApp.IntegrationTests.csproj" />
+    <Project Path="tests/PharmacyApp.UnitTests/PharmacyApp.UnitTests.csproj" />
+  </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build Solution="*|Any CPU" />
+  </Project>
+</Solution>
