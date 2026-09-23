@@ -15,13 +15,11 @@ public class AccountNotificationSender : IAccountNotificationSender
         _emailSenderService = emailSenderService;
     }
 
-    public async Task SendEmailForRegisterConfirmationAsync(User user, string token, 
-        string scheme, string host, CancellationToken ct)
+    public async Task SendEmailForRegisterConfirmationAsync(
+        string email, string userName, string token, string scheme, string host, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(user.Email))
-        {
-            throw new InvalidOperationException("User email is required for confirmation email.");
-        }
+        if (string.IsNullOrWhiteSpace(email))
+            throw new InvalidOperationException("Email is required for confirmation email.");
 
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var baseUrl = $"{scheme}://{host}".TrimEnd('/');
@@ -29,27 +27,25 @@ public class AccountNotificationSender : IAccountNotificationSender
             $"{baseUrl}/confirm-email",
             new Dictionary<string, string?>
             {
-                ["userId"] = user.Id,
+                ["userId"] = "", 
                 ["token"] = encodedToken
             });
-        var emailBody = $"<p>Please confirm your email by clicking this link: <a href='{confirmationLink}'>Confirm Email</a></p>";
+        var emailBody = $"<p>Hello {userName},<br/>Please confirm your email by clicking this link: <a href='{confirmationLink}'>Confirm Email</a></p>";
 
         await _emailSenderService.SendEmailAsync(new EmailRequestDto
         {
-            To = user.Email,
+            To = email,
             Subject = "Email Confirmation",
             Body = emailBody,
             IsHtml = true
         }, ct);
     }
 
-    public async Task SendEmailForResetPasswordAsync(User user, string token, string scheme, 
-        string host, CancellationToken ct)
+    public async Task SendEmailForResetPasswordAsync(
+        string email, string token, string scheme, string host, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(user.Email))
-        {
-            throw new InvalidOperationException("User email is required for password reset email.");
-        }
+        if (string.IsNullOrWhiteSpace(email))
+            throw new InvalidOperationException("Email is required for password reset email.");
 
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var baseUrl = $"{scheme}://{host}".TrimEnd('/');
@@ -57,14 +53,14 @@ public class AccountNotificationSender : IAccountNotificationSender
             $"{baseUrl}/reset-password",
             new Dictionary<string, string?>
             {
-                ["email"] = user.Email,
+                ["email"] = email,
                 ["token"] = encodedToken
             });
         var emailBody = $"<p>Please reset your password by clicking this link: <a href='{resetLink}'>Reset Password</a></p>";
 
         await _emailSenderService.SendEmailAsync(new EmailRequestDto
         {
-            To = user.Email,
+            To = email,
             Subject = "Password Reset",
             Body = emailBody,
             IsHtml = true

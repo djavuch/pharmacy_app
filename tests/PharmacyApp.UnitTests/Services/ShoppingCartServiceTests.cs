@@ -323,18 +323,18 @@ public sealed class ShoppingCartServiceTests
         public int RemoveItemCalls { get; private set; }
         public int? ClearedCartId { get; private set; }
 
-        public Task<ShoppingCart?> GetByUserIdAsync(string userId) => Task.FromResult(_cart);
-        public Task<ShoppingCart?> GetBySessionIdAsync(string sessionId) => Task.FromResult(_cart);
-        public Task<ShoppingCart?> GetByUserOrSessionAsync(string? userId, string? sessionId) => Task.FromResult(_cart);
+        public Task<ShoppingCart?> GetByUserIdAsync(string userId, CancellationToken ct = default) => Task.FromResult(_cart);
+        public Task<ShoppingCart?> GetBySessionIdAsync(string sessionId, CancellationToken ct = default) => Task.FromResult(_cart);
+        public Task<ShoppingCart?> GetByUserOrSessionAsync(string? userId, string? sessionId, CancellationToken ct = default) => Task.FromResult(_cart);
         public Task<CartItem?> GetItemAsync(int cartId, int productId) => throw new NotSupportedException();
-        public Task<ShoppingCart> AddAsync(ShoppingCart cart) => throw new NotSupportedException();
+        public Task<ShoppingCart> AddAsync(ShoppingCart cart, CancellationToken ct = default) => throw new NotSupportedException();
 
         public Task UpdateAsync(ShoppingCart cart)
         {
             return Task.CompletedTask;
         }
 
-        public Task AddItemAsync(CartItem cartItem)
+        public Task AddItemAsync(CartItem cartItem, CancellationToken ct = default)
         {
             AddItemCalls++;
             return Task.CompletedTask;
@@ -352,13 +352,13 @@ public sealed class ShoppingCartServiceTests
             return Task.CompletedTask;
         }
 
-        public Task ClearAsync(int cartId)
+        public Task ClearAsync(int cartId, CancellationToken ct = default)
         {
             ClearedCartId = cartId;
             return Task.CompletedTask;
         }
 
-        public Task MigrateCartAsync(string sessionId, string userId) => throw new NotSupportedException();
+        public Task MigrateCartAsync(string sessionId, string userId, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private sealed class FakeDiscountService : IDiscountService

@@ -26,7 +26,7 @@ public class OrderEmailNotifier : IOrderEmailNotifier
         _frontendOptions = frontendOptions.Value;
     }
 
-    public async Task SendOrderConfirmationEmailAsync(int orderId)
+    public async Task SendOrderConfirmationEmailAsync(int orderId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
         if (order is null || order.User is null)
@@ -39,20 +39,17 @@ public class OrderEmailNotifier : IOrderEmailNotifier
             throw new InvalidOperationException($"Order #{orderId} has no recipient email.");
         }
 
-        var subject = $"Order Confirmation - Order #{orderId}";
-        var body = BuildOrderConfirmationEmailBody(order);
-
         var emailRequest = new EmailRequestDto
         {
             To = order.User.Email,
-            Subject = subject,
-            Body = body
+            Subject = $"Order Confirmation - Order #{orderId}",
+            Body = BuildOrderConfirmationEmailBody(order)
         };
 
-        await _emailSenderService.SendEmailAsync(emailRequest);
+        await _emailSenderService.SendEmailAsync(emailRequest, ct);
     }
 
-    public async Task SendOrderStatusUpdateEmailAsync(int orderId, string oldStatus, string newStatus)
+    public async Task SendOrderStatusUpdateEmailAsync(int orderId, string oldStatus, string newStatus, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
         if (order is null || order.User is null)
@@ -75,10 +72,10 @@ public class OrderEmailNotifier : IOrderEmailNotifier
             Body = body
         };
 
-        await _emailSenderService.SendEmailAsync(emailRequest);
+        await _emailSenderService.SendEmailAsync(emailRequest, ct);
     }
 
-    public async Task SendOrderCancellationEmailAsync(int orderId)
+    public async Task SendOrderCancellationEmailAsync(int orderId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
 
@@ -102,10 +99,10 @@ public class OrderEmailNotifier : IOrderEmailNotifier
             Body = body
         };
 
-        await _emailSenderService.SendEmailAsync(emailRequest);
+        await _emailSenderService.SendEmailAsync(emailRequest, ct);
     }
 
-    public async Task SendOrderCompositionChangeEmailAsync(int orderId)
+    public async Task SendOrderCompositionChangeEmailAsync(int orderId, CancellationToken ct = default)
     {
         var order = await _unitOfWork.Orders.GetByIdAsync(orderId);
 
@@ -129,7 +126,7 @@ public class OrderEmailNotifier : IOrderEmailNotifier
             Body = body
         };
 
-        await _emailSenderService.SendEmailAsync(emailRequest);
+        await _emailSenderService.SendEmailAsync(emailRequest, ct);
     }
 
     private string BuildOrderConfirmationEmailBody(Order order)

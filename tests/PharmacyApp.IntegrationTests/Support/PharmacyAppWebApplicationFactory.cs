@@ -9,7 +9,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using PharmacyApp.Application.Interfaces.Abstractions;
 using PharmacyApp.Application.Interfaces.Email;
 using PharmacyApp.Domain.Entities;
 using PharmacyApp.Domain.Entities.PromoCode;
@@ -61,11 +60,8 @@ public sealed class PharmacyAppWebApplicationFactory : WebApplicationFactory<Pro
             services.RemoveAll<DbContextOptions<PharmacyAppDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<PharmacyAppDbContext>>();
             services.RemoveAll<IHostedService>();
-            services.RemoveAll<IBackgroundTaskQueue>();
             services.RemoveAll<IOrderEmailNotifier>();
-
             services.AddDbContext<PharmacyAppDbContext>(options => options.UseSqlite(_connection));
-            services.AddSingleton<IBackgroundTaskQueue, NoOpBackgroundTaskQueue>();
             services.AddSingleton<IOrderEmailNotifier, NoOpOrderEmailNotifier>();
         });
     }

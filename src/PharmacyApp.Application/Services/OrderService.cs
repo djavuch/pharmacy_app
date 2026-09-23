@@ -14,12 +14,15 @@ using PharmacyApp.Domain.Entities;
 using PharmacyApp.Domain.Entities.PromoCode;
 using PharmacyApp.Domain.Enums;
 using System.Data;
+using PharmacyApp.Application.Contracts.Messages;
+using PharmacyApp.Application.Interfaces.Messaging;
 
 namespace PharmacyApp.Application.Services;
 
 public class OrderService : IOrderService
 {
     private readonly IUnitOfWorkRepository _unitOfWork;
+    private readonly IMessagePublisher _messagePublisher;
     private readonly IOrderEmailNotifier _orderEmailNotifier;
     private readonly IPromoCodeService _promoCodeService;
     private readonly IProductService _productService;
@@ -28,6 +31,7 @@ public class OrderService : IOrderService
 
     public OrderService(
         IUnitOfWorkRepository unitOfWork,
+        IMessagePublisher messagePublisher,
         IOrderEmailNotifier orderEmailNotifier,
         IPromoCodeService promoCodeService,
         IProductService productService,
@@ -35,6 +39,7 @@ public class OrderService : IOrderService
         IDiscountService discountService)
     {
         _unitOfWork = unitOfWork;
+        _messagePublisher = messagePublisher;
         _orderEmailNotifier = orderEmailNotifier;
         _promoCodeService = promoCodeService;
         _productService = productService;
@@ -118,7 +123,7 @@ public class OrderService : IOrderService
         return Result<OrderDetailsDto>.Success(order.ToOrderResponseDto());
     }
 
-    public async Task<Result<OrderDetailsDto>> CreateOrderAsync(CreateOrderDto createOrderDto, string userId)
+    public async Task<Result<OrderDetailsDto>> CreateOrderAsync(CreateOrderDto createOrderDto, string userId, CancellationToken ct = default)
     {
         const int maxRetries = 3;
         var retryCount = 0;
@@ -127,7 +132,7 @@ public class OrderService : IOrderService
         {
             try
             {
-                using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+                await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
 
                 try
                 {
@@ -168,16 +173,8 @@ public class OrderService : IOrderService
 
                         if (createOrderDto.SaveAddress)
                         {
-                            var newUserAddress = new UserAddress(
-                                userId,
-                                createOrderDto.NewAddress.Street,
-                                createOrderDto.NewAddress.ApartmentNumber,
-                                createOrderDto.NewAddress.City,
-                                createOrderDto.NewAddress.State,
-                                createOrderDto.NewAddress.ZipCode,
-                                createOrderDto.NewAddress.Country,
-                                createOrderDto.SavedLabel ?? string.Empty,
-                                createOrderDto.NewAddress.AdditionalInfo);
+                            var label = createOrderDto.SavedLabel ?? string.Empty;
+                            var newUserAddress = createOrderDto.NewAddress.ToUserAddress(userId, label);
 
                             await _unitOfWork.UserAddresses.AddAsync(newUserAddress);
                         }
@@ -295,7 +292,7 @@ public class OrderService : IOrderService
                             order.AppliedPromoCode);
                     }
 
-                    await _orderEmailNotifier.SendOrderConfirmationEmailAsync(order.Id);
+                    await _messagePublisher.PublishAsync(OrderMessages.Created(order), ct);
 
                     return Result<OrderDetailsDto>.Success(order.ToOrderResponseDto());
                 }
@@ -320,7 +317,7 @@ public class OrderService : IOrderService
         return Result<OrderDetailsDto>.Conflict("Order creation failed after multiple retries.");
     }
 
-    public async Task<Result> UpdateOrderAsync(int orderId, UpdateOrderDto updateOrderDto)
+    public async Task<Result> UpdateOrderAsync(int orderId, UpdateOrderDto updateOrderDto, CancellationToken ct = default)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
         Guid? invalidatedPromoCodeId = null;
@@ -440,7 +437,7 @@ public class OrderService : IOrderService
                     invalidatedPromoCode);
             }
 
-            await _orderEmailNotifier.SendOrderCompositionChangeEmailAsync(order.Id);
+            await _messagePublisher.PublishAsync(OrderMessages.CompositionChanged(order), ct);
 
             return Result.Success();
         }
@@ -456,7 +453,7 @@ public class OrderService : IOrderService
         }
     }
 
-    public async Task<Result> CancelOrderAsync(int orderId, string userId, bool isStaff)
+    public async Task<Result> CancelOrderAsync(int orderId, string userId, bool isStaff, CancellationToken ct = default)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
         Guid? invalidatedPromoCodeId = null;
@@ -505,7 +502,7 @@ public class OrderService : IOrderService
                     invalidatedPromoCode);
             }
 
-            await _orderEmailNotifier.SendOrderCancellationEmailAsync(order.Id);
+            await _messagePublisher.PublishAsync(OrderMessages.Cancelled(order), ct);
 
             return Result.Success();
         }
@@ -521,7 +518,7 @@ public class OrderService : IOrderService
         }
     }
 
-    public async Task<Result> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusDto updateOrderStatusDto)
+    public async Task<Result> UpdateOrderStatusAsync(int orderId, UpdateOrderStatusDto updateOrderStatusDto, CancellationToken ct = default)
     {
         await using var transaction = await _unitOfWork.BeginTransactionAsync(IsolationLevel.ReadCommitted);
         Guid? invalidatedPromoCodeId = null;
@@ -586,7 +583,7 @@ public class OrderService : IOrderService
                     invalidatedPromoCode);
             }
 
-            await _orderEmailNotifier.SendOrderStatusUpdateEmailAsync(order.Id, oldStatus.ToString(), newStatus.ToString());
+            await _messagePublisher.PublishAsync(OrderMessages.StatusChanged(order, oldStatus.ToString(), newStatus.ToString()), ct);
 
             return Result.Success();
         }

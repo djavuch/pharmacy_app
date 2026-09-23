@@ -8,13 +8,15 @@ using PharmacyApp.Domain.Common;
 namespace PharmacyApp.Application.Interfaces.Services;
 public interface IAuthService
 {
-    Task<Result<UserProfileDto>> UserRegisterAsync(UserRegistrationDto userRegistrationDto, string scheme, string host);
+    Task<Result<UserProfileDto>> UserRegisterAsync(
+        UserRegistrationDto userRegistrationDto, string scheme, string host,
+        CancellationToken ct = default);
     Task<Result<bool>> ConfirmEmailAsync(string userId, string token);
     Task<Result<bool>> ResendConfirmationEmailAsync(string email, string scheme, string host);
-    Task<Result<bool>> ForgotPasswordAsync(string email, string scheme, string host);
+    Task<Result<bool>> ForgotPasswordAsync(string email, string scheme, string host, CancellationToken ct = default);
     Task<IdentityOperationResult> ResetPasswordAsync(ResetPasswordDto resetPasswordDto);
-    Task<LoginResult> LoginAsync(UserLoginDto userLoginDto);
-    Task<LoginResult> RefreshTokenAsync(string refreshToken);
-    Task LogoutAsync(string refreshToken);
+    Task<LoginResult> LoginAsync(UserLoginDto userLoginDto, CancellationToken ct = default);
+    Task<LoginResult> RefreshTokenAsync(string refreshToken, CancellationToken ct = default);
+    Task LogoutAsync(string refreshToken, CancellationToken ct = default);
     Task<IdentityOperationResult> ChangePasswordAsync(ChangePasswordDto changePasswordDto);
 }

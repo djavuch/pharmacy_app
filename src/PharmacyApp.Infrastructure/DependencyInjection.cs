@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿using MassTransit;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -7,6 +8,7 @@ using PharmacyApp.Application.Authorization.Requirements;
 using PharmacyApp.Application.Interfaces.Abstractions;
 using PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 using PharmacyApp.Application.Interfaces.Email;
+using PharmacyApp.Application.Interfaces.Messaging;
 using PharmacyApp.Application.Interfaces.RefreshTokens;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Application.Interfaces.UserRoles;
@@ -16,10 +18,10 @@ using PharmacyApp.Infrastructure.Extensions;
 using PharmacyApp.Infrastructure.Options;
 using PharmacyApp.Infrastructure.Repositories;
 using PharmacyApp.Infrastructure.Services.Authentication;
-using PharmacyApp.Infrastructure.Services.BackgroundTasks;
 using PharmacyApp.Infrastructure.Services.Email;
 using PharmacyApp.Infrastructure.Services.FileStorage;
 using PharmacyApp.Infrastructure.Services.Initialization;
+using PharmacyApp.Infrastructure.Services.Messaging;
 
 namespace PharmacyApp.Infrastructure;
 public static class DependencyInjection
@@ -64,10 +66,6 @@ public static class DependencyInjection
         services.AddScoped<IRoleInitializationService, RoleInitializationService>();
         services.AddScoped<IClaimsService, ClaimsService>();           
         services.AddScoped<IJwtTokenProvider, JwtTokenProvider>();
-        
-
-        services.AddSingleton<IBackgroundTaskQueue>(sp => new BackgroundTaskQueue(100));
-        services.AddHostedService<QueueHostedService>();
 
         services.AddScoped<IJwtTokenProvider, JwtTokenProvider>();
         
@@ -114,6 +112,33 @@ public static class DependencyInjection
             options.Cookie.HttpOnly = true;
             options.Cookie.IsEssential = true;
         });
+        
+        services.AddMassTransit(x =>
+        {
+            x.SetKebabCaseEndpointNameFormatter();
+            
+            x.AddConsumers(typeof(DependencyInjection).Assembly);
+
+            x.UsingRabbitMq((context, cfg) =>
+            {
+                cfg.Host(configuration["RabbitMq:Host"], "/", h =>
+                {
+                    h.Username(configuration["RabbitMq:Username"]);
+                    h.Password(configuration["RabbitMq:Password"]);
+                });
+
+                cfg.ConfigureEndpoints(context);
+            });
+            
+            x.AddEntityFrameworkOutbox<PharmacyAppDbContext>(entityFrameworkOutboxConfigurator =>
+            {
+                entityFrameworkOutboxConfigurator.UsePostgres();
+                entityFrameworkOutboxConfigurator.UseBusOutbox();
+                entityFrameworkOutboxConfigurator.DuplicateDetectionWindow = TimeSpan.FromSeconds(30);
+            });
+        });
+
+        services.AddScoped<IMessagePublisher, MessagePublisher>();
 
         return services;
     }

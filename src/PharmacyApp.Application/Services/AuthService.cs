@@ -5,12 +5,14 @@ using PharmacyApp.Application.Interfaces.Services;
 using PharmacyApp.Application.Mappers;
 using PharmacyApp.Domain.Entities;
 using System.Text;
+using PharmacyApp.Application.Contracts.Messages;
 using PharmacyApp.Application.Contracts.User.Account;
 using PharmacyApp.Application.Contracts.User.Profile;
 using PharmacyApp.Application.Contracts.User.Results;
 using PharmacyApp.Application.Interfaces.Abstractions;
 using PharmacyApp.Application.Interfaces.Abstractions.Authentication;
 using PharmacyApp.Application.Interfaces.Email;
+using PharmacyApp.Application.Interfaces.Messaging;
 using PharmacyApp.Application.Interfaces.Repositories;
 using PharmacyApp.Domain.Common;
 
@@ -21,25 +23,26 @@ public class AuthService : IAuthService
     private readonly IUnitOfWorkRepository _unitOfWork;
     private readonly IJwtTokenProvider _jwtTokenProvider;
     private readonly IClaimsService _claimsService;
-    private readonly IBackgroundTaskQueue _taskQueue;
+    private readonly IMessagePublisher _messagePublisher;
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<AuthService> _logger;
 
-
     public AuthService(IUnitOfWorkRepository unitOfWork, IJwtTokenProvider jwtTokenProvider, 
-        IClaimsService claimsService, IBackgroundTaskQueue taskQueue, 
+        IClaimsService claimsService, IMessagePublisher messagePublisher, 
         IServiceScopeFactory serviceScopeFactory,
         ILogger<AuthService> logger)
     {
         _unitOfWork = unitOfWork;
         _jwtTokenProvider = jwtTokenProvider;
         _claimsService = claimsService;
-        _taskQueue = taskQueue;
+        _messagePublisher = messagePublisher;
         _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
     }
 
-    public async Task<Result<UserProfileDto>> UserRegisterAsync(UserRegistrationDto userRegistrationDto, string scheme, string host)
+    public async Task<Result<UserProfileDto>> UserRegisterAsync(
+        UserRegistrationDto userRegistrationDto, string scheme, string host, 
+        CancellationToken ct = default)
     {
         var existingUser = await _unitOfWork.Users.GetByEmailAsync(userRegistrationDto.Email);
 
@@ -75,12 +78,17 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Queueing email confirmation message for user {UserId}.", newUser.Id);
 
-        await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
+        await _messagePublisher.PublishAsync(new SendRegistrationEmailMessage
         {
-            using var scope = _serviceScopeFactory.CreateScope();
-            var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
-            await emailService.SendEmailForRegisterConfirmationAsync(newUser, token, scheme, host, ct);
-        });
+            To = newUser.Email,
+            Subject = "Confirm your email",
+            Body = string.Empty, // Consumer сам сформирует тело
+            UserId = newUser.Id,
+            UserName = $"{newUser.FirstName} {newUser.LastName}",
+            ConfirmationToken = token,
+            Scheme = scheme,
+            Host = host
+        }, ct);
 
         return Result<UserProfileDto>.Success(newUser.ToUserDto("Customer")); 
     }
@@ -142,17 +150,22 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Queueing resent email confirmation message for user {UserId}.", user.Id);
 
-        await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
+        await _messagePublisher.PublishAsync(new SendRegistrationEmailMessage
         {
-            using var scope = _serviceScopeFactory.CreateScope();
-            var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
-            await emailService.SendEmailForRegisterConfirmationAsync(user, token, scheme, host, ct);
+            To = user.Email,
+            Subject = "Confirm your email",
+            Body = string.Empty,
+            UserId = user.Id,
+            UserName = $"{user.FirstName} {user.LastName}",
+            ConfirmationToken = token,
+            Scheme = scheme,
+            Host = host
         });
 
         return Result<bool>.Success(true);
     }
 
-    public async Task<Result<bool>> ForgotPasswordAsync(string email, string scheme, string host)
+    public async Task<Result<bool>> ForgotPasswordAsync(string email, string scheme, string host, CancellationToken ct = default)
     {
         var user = await _unitOfWork.Users.GetByEmailAsync(email);
 
@@ -166,12 +179,17 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Queueing password reset message for user {UserId}.", user.Id);
 
-        await _taskQueue.QueueBackgroundWorkItemAsync(async ct =>
+        await _messagePublisher.PublishAsync(new SendPasswordResetEmailMessage
         {
-            using var scope = _serviceScopeFactory.CreateScope();
-            var emailService = scope.ServiceProvider.GetRequiredService<IAccountNotificationSender>();
-            await emailService.SendEmailForResetPasswordAsync(user, token, scheme, host, ct);
-        });
+            To = user.Email,
+            Subject = "Password Reset",
+            Body = string.Empty,
+            UserId = user.Id,
+            UserName = $"{user.FirstName} {user.LastName}",
+            ResetToken = token,
+            Scheme = scheme,
+            Host = host
+        }, ct);
 
         return Result<bool>.Success(true, "If the email address was registered, you will receive an email.");
     }
@@ -209,7 +227,7 @@ public class AuthService : IAuthService
         };
     }
 
-    public async Task<LoginResult> LoginAsync(UserLoginDto userLoginDto)
+    public async Task<LoginResult> LoginAsync(UserLoginDto userLoginDto, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(userLoginDto.Email) || string.IsNullOrEmpty(userLoginDto.Password))
         {
@@ -289,7 +307,7 @@ public class AuthService : IAuthService
         var refreshTokenEntity = new RefreshToken(refreshToken, user.Id, DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
         
         await _unitOfWork.RefreshTokens.AddAsync(refreshTokenEntity);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(ct);
 
         return new LoginResult
         {
@@ -301,7 +319,7 @@ public class AuthService : IAuthService
         };
     }
 
-    public async Task<LoginResult> RefreshTokenAsync(string refreshToken)
+    public async Task<LoginResult> RefreshTokenAsync(string refreshToken, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
@@ -312,7 +330,7 @@ public class AuthService : IAuthService
             };
         }
 
-        var tokenEntity = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken);
+        var tokenEntity = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken, ct);
 
         if (tokenEntity is null || !tokenEntity.IsActive)
         {
@@ -328,8 +346,8 @@ public class AuthService : IAuthService
         if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
         {
             tokenEntity.Revoke();
-            await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity);
-            await _unitOfWork.SaveChangesAsync();
+            await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
         
             return new LoginResult
             {
@@ -341,17 +359,18 @@ public class AuthService : IAuthService
 
         //  Revoke the old refresh token
         tokenEntity.Revoke();
-        await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity);
+        await _unitOfWork.RefreshTokens.UpdateAsync(tokenEntity, ct);
 
         // Generate new JWT and refresh token
         var claims = await _claimsService.GenerateUserClaimsAsync(user.Id, user.Email);
         var newAccessToken = _jwtTokenProvider.GenerateToken(claims);
         var newRefreshToken = _jwtTokenProvider.GenerateRefreshToken();
         
-        var newRefreshTokenEntity = new RefreshToken(newRefreshToken, user.Id, DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
+        var newRefreshTokenEntity = new RefreshToken(newRefreshToken, user.Id, 
+            DateTime.UtcNow.AddDays(_jwtTokenProvider.GetRefreshTokenExpirationInDays()));
         
-        await _unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.RefreshTokens.AddAsync(newRefreshTokenEntity, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
 
         return new LoginResult
         {
@@ -362,16 +381,16 @@ public class AuthService : IAuthService
         };
     }
 
-    public async Task LogoutAsync(string refreshToken)
+    public async Task LogoutAsync(string refreshToken, CancellationToken ct = default)
     {
-        var tokenEntity = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken);
+        var tokenEntity = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken, ct);
 
         if (tokenEntity is null)
         {
             return; 
         }
 
-        await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(tokenEntity.UserId);
+        await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(tokenEntity.UserId, ct);
         await _unitOfWork.Auth.LogoutAsync();
     }
 

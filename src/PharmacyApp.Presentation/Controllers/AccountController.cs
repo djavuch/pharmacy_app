@@ -29,12 +29,12 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("register")]
-    public async Task<IActionResult> Register(UserRegistrationDto userRegistrationDto)
+    public async Task<IActionResult> Register(UserRegistrationDto userRegistrationDto, CancellationToken ct)
     {
         if (!TryResolvePublicUrlComponents(out var scheme, out var host))
             return BadRequest(new { message = "Request host is required" });
         
-        var result = await _userService.UserRegisterAsync(userRegistrationDto, scheme, host);
+        var result = await _userService.UserRegisterAsync(userRegistrationDto, scheme, host, ct);
         
         if (!result.IsSuccess)
             return StatusCode(result.ErrorType.ToStatusCode(), new { message = result.Message });
@@ -60,9 +60,9 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto)
+    public async Task<IActionResult> Login([FromBody] UserLoginDto userLoginDto, CancellationToken ct)
     {
-        var result = await _userService.LoginAsync(userLoginDto);
+        var result = await _userService.LoginAsync(userLoginDto, ct);
 
         if (!result.Succeeded)
         {
@@ -107,7 +107,7 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout(RefreshTokenRequestDto request)
+    public async Task<IActionResult> Logout(RefreshTokenRequestDto request, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(request.RefreshToken))
             return BadRequest(new { message = "Refresh token is required for logout." });
@@ -119,7 +119,7 @@ public class AccountController : ControllerBase
 
         SessionHelper.ClearSessionId(HttpContext);
         
-        await _userService.LogoutAsync(request.RefreshToken);
+        await _userService.LogoutAsync(request.RefreshToken, ct);
         return Ok(new { message = "Logged out successfully." });
     }
 
@@ -149,12 +149,12 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto, CancellationToken ct)
     {
         if (!TryResolvePublicUrlComponents(out var scheme, out var host))
             return BadRequest(new { message = "Request host is required" });
         
-        var result = await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, scheme, host);
+        var result = await _userService.ForgotPasswordAsync(forgotPasswordDto.Email, scheme, host, ct);
         return Ok(new { message = result.Message });
     }
 
