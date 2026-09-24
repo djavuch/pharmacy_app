@@ -1,6 +1,6 @@
 # PharmacyApp
 
-PharmacyApp is a pharmacy management platform with an **ASP.NET Core 9 backend** and a **Next.js frontend** in one repository. The project includes customer flows, account management, promotions, bonus loyalty features, and an admin panel for operational work.
+PharmacyApp is a pharmacy management platform with an **ASP.NET Core 9** and a **Next.js**. The project includes customer flows, account management, promotions, bonus loyalty features and an admin panel for operational work.
 
 ## Project Overview
 
